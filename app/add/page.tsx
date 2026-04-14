@@ -73,6 +73,13 @@ function getExpectedTimeStem(dayStem: string, timeBranch: string): string | null
   return TIAN_GAN_OPTIONS[(startGanIndex + timeIndex) % 10];
 }
 
+function prioritizeRecommended(options: readonly string[], recommended: string | null): string[] {
+  if (!recommended || !options.includes(recommended)) {
+    return [...options];
+  }
+  return [recommended, ...options.filter((item) => item !== recommended)];
+}
+
 export default function AddRecordPage() {
   const router = useRouter();
   const resultPosterRef = useRef<HTMLDivElement | null>(null);
@@ -96,6 +103,7 @@ export default function AddRecordPage() {
   const [searchHint, setSearchHint] = useState("");
   const [hasSearchedCandidates, setHasSearchedCandidates] = useState(false);
   const [pillarWarning, setPillarWarning] = useState("");
+  const [strictRuleMode, setStrictRuleMode] = useState(false);
   const [notes, setNotes] = useState("");
   const [gender, setGender] = useState<"男" | "女">("男");
   const [isSaving, setIsSaving] = useState(false);
@@ -134,6 +142,24 @@ export default function AddRecordPage() {
         : timeStemBaseOptions,
     [expectedTimeStem, timeStemBaseOptions]
   );
+  const orderedMonthStemOptions = useMemo(
+    () => prioritizeRecommended(monthStemOptions, expectedMonthStem),
+    [monthStemOptions, expectedMonthStem]
+  );
+  const orderedTimeStemOptions = useMemo(
+    () => prioritizeRecommended(timeStemOptions, expectedTimeStem),
+    [timeStemOptions, expectedTimeStem]
+  );
+  const isMonthStemLocked =
+    strictRuleMode &&
+    monthStemOptions.length === 1 &&
+    Boolean(expectedMonthStem) &&
+    monthStemOptions[0] === expectedMonthStem;
+  const isTimeStemLocked =
+    strictRuleMode &&
+    timeStemOptions.length === 1 &&
+    Boolean(expectedTimeStem) &&
+    timeStemOptions[0] === expectedTimeStem;
   const ganZhi = useMemo(() => {
     if (inputMode === "pillars") {
       return getGanZhiFromPillars(
@@ -295,6 +321,13 @@ export default function AddRecordPage() {
   }, [monthStem, monthBranch, monthStemOptions]);
 
   useEffect(() => {
+    if (expectedMonthStem && monthStemOptions.includes(expectedMonthStem)) {
+      setMonthStem(expectedMonthStem);
+      setPillarWarning(`月干已按五虎遁推荐为 ${expectedMonthStem}。如需特殊录入可手动调整。`);
+    }
+  }, [expectedMonthStem, yearStem, monthBranch, monthStemOptions]);
+
+  useEffect(() => {
     if (!timeBranchOptions.includes(timeBranch as (typeof DI_ZHI_OPTIONS)[number])) {
       const fallback = timeBranchOptions[0];
       setTimeBranch(fallback);
@@ -309,6 +342,13 @@ export default function AddRecordPage() {
       setPillarWarning(`时柱已按五鼠遁规则自动修正为 ${fallback}${timeBranch}。`);
     }
   }, [timeStem, timeBranch, timeStemOptions]);
+
+  useEffect(() => {
+    if (expectedTimeStem && timeStemOptions.includes(expectedTimeStem)) {
+      setTimeStem(expectedTimeStem);
+      setPillarWarning(`时干已按五鼠遁推荐为 ${expectedTimeStem}。如需特殊录入可手动调整。`);
+    }
+  }, [expectedTimeStem, dayStem, timeBranch, timeStemOptions]);
 
   const closestCandidateValue = useMemo(() => {
     if (!candidateDateTimes.length) {
@@ -501,16 +541,29 @@ export default function AddRecordPage() {
                 </div>
               </label>
               <label className="grid gap-2 text-sm">
-                月柱
+                <span className="inline-flex items-center gap-1">
+                  月柱
+                  {expectedMonthStem ? (
+                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700">
+                      {isMonthStemLocked ? "规" : "推荐"}
+                    </span>
+                  ) : null}
+                </span>
                 <div className="grid grid-cols-2 gap-1.5">
                   <select
                     value={monthStem}
                     onChange={(event) => setMonthStem(event.target.value)}
-                    className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                    disabled={isMonthStemLocked}
+                    className={`w-full min-w-0 rounded-lg border px-2 py-2 text-sm outline-none ring-slate-300 focus:ring ${
+                      isMonthStemLocked
+                        ? "cursor-not-allowed border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-slate-300"
+                    }`}
                   >
-                    {monthStemOptions.map((option) => (
+                    {orderedMonthStemOptions.map((option) => (
                       <option key={`month-stem-${option}`} value={option}>
                         {option}
+                        {expectedMonthStem === option ? "（推荐）" : ""}
                       </option>
                     ))}
                   </select>
@@ -555,16 +608,29 @@ export default function AddRecordPage() {
                 </div>
               </label>
               <label className="grid gap-2 text-sm">
-                时柱
+                <span className="inline-flex items-center gap-1">
+                  时柱
+                  {expectedTimeStem ? (
+                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700">
+                      {isTimeStemLocked ? "规" : "推荐"}
+                    </span>
+                  ) : null}
+                </span>
                 <div className="grid grid-cols-2 gap-1.5">
                   <select
                     value={timeStem}
                     onChange={(event) => setTimeStem(event.target.value)}
-                    className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                    disabled={isTimeStemLocked}
+                    className={`w-full min-w-0 rounded-lg border px-2 py-2 text-sm outline-none ring-slate-300 focus:ring ${
+                      isTimeStemLocked
+                        ? "cursor-not-allowed border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-slate-300"
+                    }`}
                   >
-                    {timeStemOptions.map((option) => (
+                    {orderedTimeStemOptions.map((option) => (
                       <option key={`time-stem-${option}`} value={option}>
                         {option}
+                        {expectedTimeStem === option ? "（推荐）" : ""}
                       </option>
                     ))}
                   </select>
@@ -582,6 +648,15 @@ export default function AddRecordPage() {
                 </div>
               </label>
             </div>
+            <label className="inline-flex items-center gap-2 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={strictRuleMode}
+                onChange={(event) => setStrictRuleMode(event.target.checked)}
+                className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              严格模式（锁定月干/时干推荐结果）
+            </label>
             {pillarWarning ? <p className="text-xs text-red-500">{pillarWarning}</p> : null}
             <div className="rounded-lg border border-[#e6ded2] bg-[#fbf8f3] px-3 py-2.5">
               <div className="grid gap-3 sm:grid-cols-2">
