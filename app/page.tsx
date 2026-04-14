@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import RecordList from "@/components/record-list";
 import { mockRecords, type BaziRecord } from "@/data/mock-records";
-import { getStoredRecords } from "@/lib/records-storage";
+import { getStoredRecords, removeStoredRecordById } from "@/lib/records-storage";
 
 export default function HomePage() {
   const [records, setRecords] = useState<BaziRecord[]>([]);
@@ -30,6 +30,11 @@ export default function HomePage() {
     window.localStorage.setItem("bazi_records", JSON.stringify(records));
   }, [records, hasHydrated]);
 
+  const handleDeleteRecord = (id: string) => {
+    const next = removeStoredRecordById(id);
+    setRecords(next);
+  };
+
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
@@ -44,7 +49,7 @@ export default function HomePage() {
           添加记录
         </Link>
       </div>
-      <RecordList records={records} />
+      <RecordList records={records} onDelete={handleDeleteRecord} />
     </section>
   );
 }

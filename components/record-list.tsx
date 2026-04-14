@@ -1,11 +1,16 @@
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
 import type { BaziRecord } from "@/data/mock-records";
 
 type RecordListProps = {
   records: BaziRecord[];
+  onDelete: (id: string) => void;
 };
 
-export default function RecordList({ records }: RecordListProps) {
+export default function RecordList({ records, onDelete }: RecordListProps) {
+  const router = useRouter();
+
   if (records.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
@@ -17,25 +22,39 @@ export default function RecordList({ records }: RecordListProps) {
   return (
     <div className="grid gap-4">
       {records.map((record) => (
-        <Link
+        <article
           key={record.id}
-          href={`/result?id=${encodeURIComponent(record.id)}`}
-          className="block rounded-xl bg-white p-5 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+          onClick={() => router.push(`/result?id=${encodeURIComponent(record.id)}`)}
+          className="cursor-pointer rounded-xl bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
         >
-          <article className="cursor-pointer">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{record.name}</h2>
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <h2 className="text-lg font-semibold">{record.name}</h2>
+            <div className="flex items-center gap-2">
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">
                 {record.gender}
               </span>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  const shouldDelete = window.confirm("确定要删除这条记录吗？");
+                  if (!shouldDelete) {
+                    return;
+                  }
+                  onDelete(record.id);
+                }}
+                className="rounded px-2 py-1 text-xs text-slate-400 transition-colors hover:text-red-600"
+              >
+                删除
+              </button>
             </div>
-            <p className="text-sm text-slate-600">
-              出生时间：{record.birthDate} {record.birthTime}
-            </p>
-            <p className="mt-2 text-sm text-slate-700">{record.notes}</p>
-            <p className="mt-3 text-xs text-slate-500">创建日期：{record.createdAt}</p>
-          </article>
-        </Link>
+          </div>
+          <p className="text-sm text-slate-600">
+            出生时间：{record.birthDate} {record.birthTime}
+          </p>
+          <p className="mt-2 text-sm text-slate-700">{record.notes}</p>
+          <p className="mt-3 text-xs text-slate-500">创建日期：{record.createdAt}</p>
+        </article>
       ))}
     </div>
   );

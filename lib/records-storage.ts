@@ -59,3 +59,10 @@ export function getStoredRecordById(id: string): BaziRecord | null {
   const records = getStoredRecords();
   return records.find((record) => record.id === id) ?? null;
 }
+
+export function removeStoredRecordById(id: string): BaziRecord[] {
+  const current = getStoredRecords();
+  const next = current.filter((record) => record.id !== id);
+  saveRecords(next);
+  return next;
+}
