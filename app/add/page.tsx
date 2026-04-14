@@ -32,6 +32,7 @@ export default function AddRecordPage() {
   const [searchEndYear, setSearchEndYear] = useState("2030");
   const [candidateDateTimes, setCandidateDateTimes] = useState<PillarSolarCandidate[]>([]);
   const [searchHint, setSearchHint] = useState("");
+  const [hasSearchedCandidates, setHasSearchedCandidates] = useState(false);
   const [notes, setNotes] = useState("");
   const [gender, setGender] = useState<"男" | "女">("男");
   const [isSaving, setIsSaving] = useState(false);
@@ -111,6 +112,7 @@ export default function AddRecordPage() {
   };
 
   const handleFindCandidateYears = useCallback(() => {
+    setHasSearchedCandidates(true);
     const start = Number(searchStartYear);
     const end = Number(searchEndYear);
     if (Number.isNaN(start) || Number.isNaN(end)) {
@@ -433,7 +435,7 @@ export default function AddRecordPage() {
                   onClick={handleFindCandidateYears}
                   className="h-9 self-end rounded-md border border-[#c8ad8f] bg-white px-3 text-sm text-[#6a4729] transition hover:bg-[#f7efe4]"
                 >
-                  查找对应年份
+                  搜索匹配日期
                 </button>
               </div>
               {candidateDateTimes.length ? (
@@ -451,34 +453,43 @@ export default function AddRecordPage() {
                           onClick={() => {
                             setReferenceSolarDateTime(candidate.value);
                             setReferenceYear(`${candidate.year}`);
+                            const [nextDate = "", nextTime = ""] = candidate.value.split("T");
+                            setBirthDate(nextDate);
+                            setBirthTime(nextTime);
                           }}
                           className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
                             isSelected
-                              ? "border-[#9f7b45] bg-[#f8f1e8]"
-                              : "border-slate-200 bg-[#f8f8f8] hover:border-slate-300"
+                              ? "border-2 border-blue-500 bg-blue-50"
+                              : "border border-slate-200 bg-gray-50 hover:border-slate-300"
                           }`}
                         >
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-start justify-between gap-3">
                             <p className="text-sm text-slate-800">{candidate.solarLabel}</p>
-                            {isClosest ? (
-                              <span
-                                className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${
-                                  hasReferenceYear
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "bg-amber-100 text-amber-700"
-                                }`}
-                              >
-                                {hasReferenceYear ? "最接近参考年" : "推荐"}
-                              </span>
-                            ) : null}
+                            <p className="shrink-0 text-xs text-slate-500">农历：{candidate.lunarLabel}</p>
                           </div>
-                          <p className="mt-1 text-xs text-slate-500">农历：{candidate.lunarLabel}</p>
+                          {isClosest ? (
+                            <span
+                              className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] ${
+                                hasReferenceYear
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {hasReferenceYear ? "最接近参考年" : "推荐"}
+                            </span>
+                          ) : null}
                         </button>
                       );
                     })}
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-gray-50 px-3 py-3 text-xs text-slate-500">
+                  {hasSearchedCandidates
+                    ? "未找到匹配日期，请检查干支组合是否正确。"
+                    : "正在根据干支搜索匹配的日期..."}
+                </div>
+              )}
               {searchHint ? <p className="mt-1 text-xs text-slate-500">{searchHint}</p> : null}
               <p className="mt-1 text-xs text-slate-500">
                 此时间仅用于计算起运时间与流年展示，排盘核心仍以四柱干支为准。
