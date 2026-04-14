@@ -195,7 +195,9 @@ const SHEN_SHA_PRIORITY: Record<string, number> = {
   天医: 5,
   将星: 6,
   华盖: 7,
-  空亡: 8
+  空亡: 8,
+  驿马: 9,
+  桃花: 10
 };
 
 const ZHI_INDEX_MAP: Record<string, number> = {
@@ -415,6 +417,20 @@ function getHuaGai(dayZhi: string): string {
   return "丑";
 }
 
+function getYiMa(dayZhi: string): string {
+  if (["申", "子", "辰"].includes(dayZhi)) return "寅";
+  if (["寅", "午", "戌"].includes(dayZhi)) return "申";
+  if (["亥", "卯", "未"].includes(dayZhi)) return "巳";
+  return "亥";
+}
+
+function getTaoHua(dayZhi: string): string {
+  if (["申", "子", "辰"].includes(dayZhi)) return "酉";
+  if (["寅", "午", "戌"].includes(dayZhi)) return "卯";
+  if (["亥", "卯", "未"].includes(dayZhi)) return "子";
+  return "午";
+}
+
 function getKongWangZhi(dayGanZhi: string): string[] {
   const { gan, zhi } = getGanZhiParts(dayGanZhi);
   const ganIndex = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"].indexOf(gan);
@@ -458,6 +474,12 @@ function getShenShaTags(
   }
   if (getHuaGai(dayZhi) === zhi) {
     tags.push("华盖");
+  }
+  if (getYiMa(dayZhi) === zhi) {
+    tags.push("驿马");
+  }
+  if (getTaoHua(dayZhi) === zhi) {
+    tags.push("桃花");
   }
   if (getKongWangZhi(dayGanZhi).includes(zhi)) {
     tags.push("空亡");

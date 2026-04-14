@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { GanZhiResult } from "@/lib/bazi";
 import PatternAnalysis from "@/components/pattern-analysis";
 import ShenShaBadge from "@/components/shen-sha-badge";
@@ -32,11 +35,39 @@ function getShiShenShortColorClass(shortName: string): string {
 }
 
 export default function FortuneCards({ ganZhi }: FortuneCardsProps) {
+  const [shenShaMode, setShenShaMode] = useState<"compact" | "full">("compact");
+  const getVisibleShenSha = (tags: string[]) => (shenShaMode === "compact" ? tags.slice(0, 3) : tags);
+
   return (
     <div className="space-y-2 rounded-md border border-[#c8ad8f] bg-[#f8f4ef] p-3 text-xs text-slate-700">
       <PatternAnalysis ganZhi={ganZhi} />
       <p className="font-semibold tracking-[0.2em] text-[#6a4729]">大运</p>
       <p>{ganZhi.yunStartDesc}</p>
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] text-slate-500">神煞显示：</span>
+        <button
+          type="button"
+          onClick={() => setShenShaMode("compact")}
+          className={`rounded border px-2 py-0.5 text-[11px] transition-colors ${
+            shenShaMode === "compact"
+              ? "border-[#c8ad8f] bg-[#efe2d2] text-[#6a4729]"
+              : "border-slate-200 bg-white text-slate-500"
+          }`}
+        >
+          精简
+        </button>
+        <button
+          type="button"
+          onClick={() => setShenShaMode("full")}
+          className={`rounded border px-2 py-0.5 text-[11px] transition-colors ${
+            shenShaMode === "full"
+              ? "border-[#c8ad8f] bg-[#efe2d2] text-[#6a4729]"
+              : "border-slate-200 bg-white text-slate-500"
+          }`}
+        >
+          完整
+        </button>
+      </div>
       {ganZhi.currentDaYun ? (
         <p className="text-sm text-slate-800">
           当前大运：{ganZhi.currentDaYun.ganZhi}（{ganZhi.currentDaYun.startYear}-
@@ -53,19 +84,12 @@ export default function FortuneCards({ ganZhi }: FortuneCardsProps) {
           return (
             <div
               key={`${item.index}-${item.ganZhi}`}
-              className={`relative min-h-[146px] rounded-md border px-2 py-2 transition-colors duration-150 touch-manipulation active:scale-[0.99] active:brightness-95 ${
+              className={`min-h-[172px] rounded-md border px-2 py-2 transition-colors duration-150 touch-manipulation active:scale-[0.99] active:brightness-95 ${
                 isCurrent
                   ? "border-[#9a6c43] bg-[#efe2d2] text-[#5c3d25]"
                   : "border-[#d9c5ad] bg-white/80 text-slate-600"
               }`}
             >
-              {!!item.shenSha.length && (
-                <div className="absolute right-1 top-1 flex flex-wrap justify-end gap-1">
-                  {item.shenSha.slice(0, 2).map((tag) => (
-                    <ShenShaBadge key={`${item.index}-${tag}`} tag={tag} theme="earth" />
-                  ))}
-                </div>
-              )}
               <p className="text-sm font-semibold tracking-[0.08em]">
                 {item.index}. {item.ganZhi}
               </p>
@@ -108,6 +132,22 @@ export default function FortuneCards({ ganZhi }: FortuneCardsProps) {
                   </span>
                 ))}
               </div>
+              <div className="mt-2 flex flex-wrap gap-1 border-t border-[#d9c5ad] pt-1.5">
+                {item.shenSha.length ? (
+                  <>
+                    {getVisibleShenSha(item.shenSha).map((tag) => (
+                      <ShenShaBadge key={`${item.index}-${tag}`} tag={tag} theme="earth" />
+                    ))}
+                    {shenShaMode === "compact" && item.shenSha.length > 3 ? (
+                      <span className="rounded border border-[#c8ad8f] bg-[#f8f4ef] px-1.5 py-0.5 text-[10px] text-[#7a5230]">
+                        +{item.shenSha.length - 3}
+                      </span>
+                    ) : null}
+                  </>
+                ) : (
+                  <span className="text-[10px] text-slate-400">无神煞</span>
+                )}
+              </div>
             </div>
           );
         })}
@@ -120,19 +160,12 @@ export default function FortuneCards({ ganZhi }: FortuneCardsProps) {
             return (
               <div
                 key={`liunian-${item.startYear}-${item.ganZhi}`}
-                className={`relative min-h-[146px] rounded-md border px-2 py-2 transition duration-150 touch-manipulation active:scale-[0.99] active:brightness-95 ${
+                className={`min-h-[172px] rounded-md border px-2 py-2 transition duration-150 touch-manipulation active:scale-[0.99] active:brightness-95 ${
                   isCurrent
                     ? "border-blue-300 bg-blue-50 text-blue-900"
                     : "border-slate-200 bg-white/70 text-slate-700"
                 }`}
               >
-                {!!item.shenSha.length && (
-                  <div className="absolute right-1 top-1 flex flex-wrap justify-end gap-1">
-                    {item.shenSha.slice(0, 2).map((tag) => (
-                      <ShenShaBadge key={`${item.startYear}-${tag}`} tag={tag} theme="slate" />
-                    ))}
-                  </div>
-                )}
                 <p className="text-sm font-semibold">
                   {item.startYear} · {item.ganZhi}
                 </p>
@@ -171,6 +204,22 @@ export default function FortuneCards({ ganZhi }: FortuneCardsProps) {
                       </span>
                     </span>
                   ))}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1 border-t border-slate-200 pt-1.5">
+                  {item.shenSha.length ? (
+                    <>
+                      {getVisibleShenSha(item.shenSha).map((tag) => (
+                        <ShenShaBadge key={`${item.startYear}-${tag}`} tag={tag} theme="slate" />
+                      ))}
+                      {shenShaMode === "compact" && item.shenSha.length > 3 ? (
+                        <span className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] text-slate-600">
+                          +{item.shenSha.length - 3}
+                        </span>
+                      ) : null}
+                    </>
+                  ) : (
+                    <span className="text-[10px] text-slate-400">无神煞</span>
+                  )}
                 </div>
               </div>
             );
