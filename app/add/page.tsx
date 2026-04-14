@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  findSolarCandidatesByPillars,
+  type PillarSolarCandidate,
   getGanZhiFromBirthTime,
   getGanZhiFromLunarBirthTime,
   getGanZhiFromPillars
@@ -25,11 +27,21 @@ export default function AddRecordPage() {
   const [pillarDay, setPillarDay] = useState("甲子");
   const [pillarTime, setPillarTime] = useState("甲子");
   const [referenceSolarDateTime, setReferenceSolarDateTime] = useState("");
+  const [referenceYear, setReferenceYear] = useState(`${new Date().getFullYear()}`);
+  const [searchStartYear, setSearchStartYear] = useState("1900");
+  const [searchEndYear, setSearchEndYear] = useState("2030");
+  const [candidateDateTimes, setCandidateDateTimes] = useState<PillarSolarCandidate[]>([]);
+  const [searchHint, setSearchHint] = useState("");
   const [notes, setNotes] = useState("");
   const [gender, setGender] = useState<"男" | "女">("男");
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const normalizedReferenceDateTime =
+    referenceSolarDateTime ||
+    (referenceYear && !Number.isNaN(Number(referenceYear))
+      ? `${referenceYear}-01-01T12:00`
+      : "");
   const ganZhi = useMemo(() => {
     if (inputMode === "pillars") {
       return getGanZhiFromPillars(
@@ -40,7 +52,7 @@ export default function AddRecordPage() {
           time: pillarTime
         },
         gender,
-        referenceSolarDateTime
+        normalizedReferenceDateTime
       );
     }
     if (inputMode === "lunar") {
@@ -56,7 +68,7 @@ export default function AddRecordPage() {
     birthDate,
     birthTime,
     gender,
-    referenceSolarDateTime
+    normalizedReferenceDateTime
   ]);
 
   const handleSaveRecord = (event: React.FormEvent<HTMLFormElement>) => {
@@ -87,7 +99,9 @@ export default function AddRecordPage() {
             }
           : undefined,
       referenceSolarDateTime:
-        inputMode === "pillars" && referenceSolarDateTime ? referenceSolarDateTime : undefined,
+        inputMode === "pillars" && normalizedReferenceDateTime
+          ? normalizedReferenceDateTime
+          : undefined,
       notes: notes.trim(),
       createdAt: new Date().toISOString().slice(0, 10)
     };
@@ -95,6 +109,65 @@ export default function AddRecordPage() {
     setIsSaving(false);
     setSaveMessage("记录已保存到本地，下次打开浏览器仍可查看。");
   };
+
+  const handleFindCandidateYears = useCallback(() => {
+    const start = Number(searchStartYear);
+    const end = Number(searchEndYear);
+    if (Number.isNaN(start) || Number.isNaN(end)) {
+      setSearchHint("请先填写有效的查找范围年份。");
+      return;
+    }
+    if (start > end) {
+      setSearchHint("查找范围无效：起始年份不能大于结束年份。");
+      return;
+    }
+    const candidates = findSolarCandidatesByPillars(
+      {
+        year: pillarYear,
+        month: pillarMonth,
+        day: pillarDay,
+        time: pillarTime
+      },
+      start,
+      end
+    );
+    if (!candidates.length) {
+      setCandidateDateTimes([]);
+      setSearchHint("该范围内未找到对应日期，请调整四柱或扩大年份范围。");
+      return;
+    }
+    setCandidateDateTimes(candidates);
+    setReferenceSolarDateTime((currentValue) =>
+      currentValue && candidates.some((item) => item.value === currentValue)
+        ? currentValue
+        : candidates[0].value
+    );
+    setReferenceYear(`${candidates[0].year}`);
+    setSearchHint(`已找到 ${candidates.length} 个候选日期，可直接选择。`);
+  }, [pillarYear, pillarMonth, pillarDay, pillarTime, searchStartYear, searchEndYear]);
+
+  useEffect(() => {
+    if (inputMode !== "pillars") {
+      return;
+    }
+    handleFindCandidateYears();
+  }, [inputMode, handleFindCandidateYears]);
+
+  const closestCandidateValue = useMemo(() => {
+    if (!candidateDateTimes.length) {
+      return "";
+    }
+    const targetYear = Number(referenceYear);
+    if (!Number.isNaN(targetYear)) {
+      return [...candidateDateTimes].sort(
+        (left, right) => Math.abs(left.year - targetYear) - Math.abs(right.year - targetYear)
+      )[0].value;
+    }
+    const currentYear = new Date().getFullYear();
+    return [...candidateDateTimes].sort(
+      (left, right) => Math.abs(left.year - currentYear) - Math.abs(right.year - currentYear)
+    )[0].value;
+  }, [candidateDateTimes, referenceYear]);
 
   const handleExportPoster = async () => {
     if (!resultPosterRef.current || !ganZhi) {
@@ -301,16 +374,112 @@ export default function AddRecordPage() {
               </label>
             </div>
             <div className="rounded-lg border border-[#e6ded2] bg-[#fbf8f3] px-3 py-2.5">
-              <label className="grid gap-1.5 text-sm">
-                <span>参考公历时间（可选）</span>
-                <input
-                  name="referenceSolarDateTime"
-                  type="datetime-local"
-                  value={referenceSolarDateTime}
-                  onChange={(event) => setReferenceSolarDateTime(event.target.value)}
-                  className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm outline-none ring-slate-300 focus:ring"
-                />
-              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-sm">
+                  <span>公历出生日期（基准）</span>
+                  <input
+                    name="referenceSolarDateTime"
+                    type="datetime-local"
+                    value={referenceSolarDateTime}
+                    onChange={(event) => setReferenceSolarDateTime(event.target.value)}
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                  />
+                </label>
+                <label className="grid gap-1.5 text-sm">
+                  <span>参考年份（可手输）</span>
+                  <input
+                    name="referenceYear"
+                    type="number"
+                    value={referenceYear}
+                    onChange={(event) => {
+                      const nextYear = event.target.value;
+                      setReferenceYear(nextYear);
+                      if (referenceSolarDateTime) {
+                        const timePart = referenceSolarDateTime.includes("T")
+                          ? referenceSolarDateTime.split("T")[1]
+                          : "12:00";
+                        const monthDayPart =
+                          referenceSolarDateTime.length >= 10
+                            ? referenceSolarDateTime.slice(5, 10)
+                            : "01-01";
+                        setReferenceSolarDateTime(`${nextYear}-${monthDayPart}T${timePart}`);
+                      }
+                    }}
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                  />
+                </label>
+              </div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                <label className="grid gap-1 text-xs text-slate-600">
+                  <span>查找范围起始年</span>
+                  <input
+                    type="number"
+                    value={searchStartYear}
+                    onChange={(event) => setSearchStartYear(event.target.value)}
+                    className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none ring-slate-300 focus:ring"
+                  />
+                </label>
+                <label className="grid gap-1 text-xs text-slate-600">
+                  <span>查找范围结束年</span>
+                  <input
+                    type="number"
+                    value={searchEndYear}
+                    onChange={(event) => setSearchEndYear(event.target.value)}
+                    className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none ring-slate-300 focus:ring"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={handleFindCandidateYears}
+                  className="h-9 self-end rounded-md border border-[#c8ad8f] bg-white px-3 text-sm text-[#6a4729] transition hover:bg-[#f7efe4]"
+                >
+                  查找对应年份
+                </button>
+              </div>
+              {candidateDateTimes.length ? (
+                <div className="mt-3 space-y-2">
+                  <h4 className="text-sm font-medium text-slate-700">候选日期</h4>
+                  <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                    {candidateDateTimes.map((candidate) => {
+                      const isSelected = candidate.value === referenceSolarDateTime;
+                      const isClosest = candidate.value === closestCandidateValue;
+                      const hasReferenceYear = !Number.isNaN(Number(referenceYear));
+                      return (
+                        <button
+                          key={candidate.value}
+                          type="button"
+                          onClick={() => {
+                            setReferenceSolarDateTime(candidate.value);
+                            setReferenceYear(`${candidate.year}`);
+                          }}
+                          className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
+                            isSelected
+                              ? "border-[#9f7b45] bg-[#f8f1e8]"
+                              : "border-slate-200 bg-[#f8f8f8] hover:border-slate-300"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm text-slate-800">{candidate.solarLabel}</p>
+                            {isClosest ? (
+                              <span
+                                className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${
+                                  hasReferenceYear
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-amber-100 text-amber-700"
+                                }`}
+                              >
+                                {hasReferenceYear ? "最接近参考年" : "推荐"}
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500">农历：{candidate.lunarLabel}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+              {searchHint ? <p className="mt-1 text-xs text-slate-500">{searchHint}</p> : null}
               <p className="mt-1 text-xs text-slate-500">
                 此时间仅用于计算起运时间与流年展示，排盘核心仍以四柱干支为准。
               </p>

@@ -74,6 +74,13 @@ export type PillarInput = {
   time: string;
 };
 
+export type PillarSolarCandidate = {
+  value: string;
+  solarLabel: string;
+  lunarLabel: string;
+  year: number;
+};
+
 const GAN_WU_XING_MAP: Record<string, WuXing> = {
   甲: "wood",
   乙: "wood",
@@ -610,6 +617,49 @@ export function getGanZhiFromPillars(
       )[0]
     : solarList[0];
   return createGanZhiResultFromSolar(solar, solar.getYear(), gender, pillars);
+}
+
+export function findSolarCandidatesByPillars(
+  pillars: PillarInput,
+  startYear: number,
+  endYear: number,
+  limit = 24
+): PillarSolarCandidate[] {
+  if (!pillars.year || !pillars.month || !pillars.day || !pillars.time) {
+    return [];
+  }
+  if (Number.isNaN(startYear) || Number.isNaN(endYear) || startYear > endYear) {
+    return [];
+  }
+  const solarList = Solar.fromBaZi(
+    pillars.year,
+    pillars.month,
+    pillars.day,
+    pillars.time,
+    2,
+    startYear
+  );
+  const filtered = solarList
+    .filter((solar) => {
+      const year = solar.getYear();
+      return year >= startYear && year <= endYear;
+    })
+    .slice(0, limit);
+  return filtered.map((solar) => {
+    const year = solar.getYear();
+    const month = `${solar.getMonth()}`.padStart(2, "0");
+    const day = `${solar.getDay()}`.padStart(2, "0");
+    const hour = `${solar.getHour()}`.padStart(2, "0");
+    const minute = `${solar.getMinute()}`.padStart(2, "0");
+    const lunar = solar.getLunar();
+    const datetimeValue = `${year}-${month}-${day}T${hour}:${minute}`;
+    return {
+      value: datetimeValue,
+      solarLabel: `${year}年${month}月${day}日 ${hour}:${minute}`,
+      lunarLabel: lunar.toString(),
+      year
+    };
+  });
 }
 
 function createGanZhiResultFromSolar(
