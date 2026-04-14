@@ -42,7 +42,7 @@ export default function ResultClient() {
       return null;
     }
     if (isPillarsMode(record.inputMode) && record.pillars) {
-      return getGanZhiFromPillars(record.pillars, record.gender);
+      return getGanZhiFromPillars(record.pillars, record.gender, record.referenceSolarDateTime);
     }
     if (record.inputMode === "lunar") {
       return getGanZhiFromLunarBirthTime(record.birthDate, record.birthTime, record.gender);
@@ -143,6 +143,14 @@ export default function ResultClient() {
             ? ` ${record.pillars.year}年 ${record.pillars.month}月 ${record.pillars.day}日 ${record.pillars.time}时（四柱录入）`
             : ` ${record.birthDate} ${record.birthTime}`}
         </p>
+        {isPillarsMode(record.inputMode) ? (
+          <p className="text-xs text-slate-500">
+            参考公历时间：
+            {record.referenceSolarDateTime
+              ? ` ${record.referenceSolarDateTime.replace("T", " ")}（用于起运/流年）`
+              : " 未设置（系统按默认年份提供静态参考）"}
+          </p>
+        ) : null}
         {record.notes ? <p className="text-sm text-slate-700">备注：{record.notes}</p> : null}
         <p className="text-xs text-slate-500">创建日期：{record.createdAt}</p>
       </article>
@@ -158,7 +166,13 @@ export default function ResultClient() {
                 isPillarsMode(record.inputMode) && record.pillars
                   ? `${record.pillars.year}年 ${record.pillars.month}月 ${record.pillars.day}日 ${record.pillars.time}时`
                   : record.birthDate,
-              birthTime: isPillarsMode(record.inputMode) ? "四柱录入" : record.birthTime,
+              birthTime: isPillarsMode(record.inputMode)
+                ? `四柱录入${
+                    record.referenceSolarDateTime
+                      ? `（参考公历 ${record.referenceSolarDateTime.replace("T", " ")}）`
+                      : "（未设置参考公历时间）"
+                  }`
+                : record.birthTime,
               createdAt: record.createdAt
             }}
             noteStorageKey={record.id}

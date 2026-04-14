@@ -585,7 +585,8 @@ export function getGanZhiFromLunarBirthTime(
 
 export function getGanZhiFromPillars(
   pillars: PillarInput,
-  gender: "男" | "女"
+  gender: "男" | "女",
+  referenceSolarDateTime?: string
 ): GanZhiResult | null {
   if (!pillars.year || !pillars.month || !pillars.day || !pillars.time) {
     return null;
@@ -601,7 +602,13 @@ export function getGanZhiFromPillars(
   if (!solarList.length) {
     return null;
   }
-  const solar = solarList[0];
+  const referenceYear = Number(referenceSolarDateTime?.slice(0, 4));
+  const hasReferenceYear = !Number.isNaN(referenceYear);
+  const solar = hasReferenceYear
+    ? [...solarList].sort(
+        (left, right) => Math.abs(left.getYear() - referenceYear) - Math.abs(right.getYear() - referenceYear)
+      )[0]
+    : solarList[0];
   return createGanZhiResultFromSolar(solar, solar.getYear(), gender, pillars);
 }
 

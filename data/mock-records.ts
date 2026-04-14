@@ -11,6 +11,7 @@ export type BaziRecord = {
     day: string;
     time: string;
   };
+  referenceSolarDateTime?: string;
   notes: string;
   createdAt: string;
 };

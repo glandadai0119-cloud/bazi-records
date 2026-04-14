@@ -31,6 +31,9 @@ export function getStoredRecords(): BaziRecord[] {
         record.inputMode === "date" ||
         record.inputMode === "ganzhi";
       const pillars = record.pillars as Record<string, unknown> | undefined;
+      const hasValidReferenceSolarDateTime =
+        record.referenceSolarDateTime === undefined ||
+        typeof record.referenceSolarDateTime === "string";
       const hasValidPillars =
         pillars === undefined ||
         (typeof pillars === "object" &&
@@ -45,6 +48,7 @@ export function getStoredRecords(): BaziRecord[] {
         typeof record.birthDate === "string" &&
         typeof record.birthTime === "string" &&
         isValidInputMode &&
+        hasValidReferenceSolarDateTime &&
         hasValidPillars &&
         typeof record.notes === "string" &&
         typeof record.createdAt === "string"

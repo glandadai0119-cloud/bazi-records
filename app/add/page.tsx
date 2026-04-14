@@ -24,6 +24,7 @@ export default function AddRecordPage() {
   const [pillarMonth, setPillarMonth] = useState("甲子");
   const [pillarDay, setPillarDay] = useState("甲子");
   const [pillarTime, setPillarTime] = useState("甲子");
+  const [referenceSolarDateTime, setReferenceSolarDateTime] = useState("");
   const [notes, setNotes] = useState("");
   const [gender, setGender] = useState<"男" | "女">("男");
   const [isSaving, setIsSaving] = useState(false);
@@ -38,14 +39,25 @@ export default function AddRecordPage() {
           day: pillarDay,
           time: pillarTime
         },
-        gender
+        gender,
+        referenceSolarDateTime
       );
     }
     if (inputMode === "lunar") {
       return getGanZhiFromLunarBirthTime(birthDate, birthTime, gender);
     }
     return getGanZhiFromBirthTime(birthDate, birthTime, gender);
-  }, [inputMode, pillarYear, pillarMonth, pillarDay, pillarTime, birthDate, birthTime, gender]);
+  }, [
+    inputMode,
+    pillarYear,
+    pillarMonth,
+    pillarDay,
+    pillarTime,
+    birthDate,
+    birthTime,
+    gender,
+    referenceSolarDateTime
+  ]);
 
   const handleSaveRecord = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -74,6 +86,8 @@ export default function AddRecordPage() {
               time: pillarTime
             }
           : undefined,
+      referenceSolarDateTime:
+        inputMode === "pillars" && referenceSolarDateTime ? referenceSolarDateTime : undefined,
       notes: notes.trim(),
       createdAt: new Date().toISOString().slice(0, 10)
     };
@@ -227,63 +241,83 @@ export default function AddRecordPage() {
             </label>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <label className="grid gap-2 text-sm">
-              年柱
-              <select
-                value={pillarYear}
-                onChange={(event) => setPillarYear(event.target.value)}
-                className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
-              >
-                {JIA_ZI_OPTIONS.map((option) => (
-                  <option key={`year-${option}`} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm">
-              月柱
-              <select
-                value={pillarMonth}
-                onChange={(event) => setPillarMonth(event.target.value)}
-                className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
-              >
-                {JIA_ZI_OPTIONS.map((option) => (
-                  <option key={`month-${option}`} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm">
-              日柱
-              <select
-                value={pillarDay}
-                onChange={(event) => setPillarDay(event.target.value)}
-                className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
-              >
-                {JIA_ZI_OPTIONS.map((option) => (
-                  <option key={`day-${option}`} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm">
-              时柱
-              <select
-                value={pillarTime}
-                onChange={(event) => setPillarTime(event.target.value)}
-                className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
-              >
-                {JIA_ZI_OPTIONS.map((option) => (
-                  <option key={`time-${option}`} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <label className="grid gap-2 text-sm">
+                年柱
+                <select
+                  value={pillarYear}
+                  onChange={(event) => setPillarYear(event.target.value)}
+                  className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                >
+                  {JIA_ZI_OPTIONS.map((option) => (
+                    <option key={`year-${option}`} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-2 text-sm">
+                月柱
+                <select
+                  value={pillarMonth}
+                  onChange={(event) => setPillarMonth(event.target.value)}
+                  className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                >
+                  {JIA_ZI_OPTIONS.map((option) => (
+                    <option key={`month-${option}`} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-2 text-sm">
+                日柱
+                <select
+                  value={pillarDay}
+                  onChange={(event) => setPillarDay(event.target.value)}
+                  className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                >
+                  {JIA_ZI_OPTIONS.map((option) => (
+                    <option key={`day-${option}`} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-2 text-sm">
+                时柱
+                <select
+                  value={pillarTime}
+                  onChange={(event) => setPillarTime(event.target.value)}
+                  className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                >
+                  {JIA_ZI_OPTIONS.map((option) => (
+                    <option key={`time-${option}`} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="rounded-lg border border-[#e6ded2] bg-[#fbf8f3] px-3 py-2.5">
+              <label className="grid gap-1.5 text-sm">
+                <span>参考公历时间（可选）</span>
+                <input
+                  name="referenceSolarDateTime"
+                  type="datetime-local"
+                  value={referenceSolarDateTime}
+                  onChange={(event) => setReferenceSolarDateTime(event.target.value)}
+                  className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                />
+              </label>
+              <p className="mt-1 text-xs text-slate-500">
+                此时间仅用于计算起运时间与流年展示，排盘核心仍以四柱干支为准。
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                录入古籍案例时，建议选择一个接近的公历年份以获取参考大运。
+              </p>
+            </div>
           </div>
         )}
 
@@ -302,12 +336,21 @@ export default function AddRecordPage() {
                     inputMode !== "pillars"
                       ? birthDate
                       : `${pillarYear}年 ${pillarMonth}月 ${pillarDay}日 ${pillarTime}时`,
-                  birthTime: inputMode === "pillars" ? "四柱录入" : birthTime
+                  birthTime:
+                    inputMode === "pillars"
+                      ? `四柱录入${
+                          referenceSolarDateTime
+                            ? `（参考公历 ${referenceSolarDateTime.replace("T", " ")}）`
+                            : "（未设置参考公历时间）"
+                        }`
+                      : birthTime
                 }}
                 noteStorageKey={`draft_${name.trim() || "guest"}_${inputMode}_${
                   inputMode !== "pillars"
                     ? `${birthDate}_${birthTime}`
-                    : `${pillarYear}_${pillarMonth}_${pillarDay}_${pillarTime}`
+                    : `${pillarYear}_${pillarMonth}_${pillarDay}_${pillarTime}_${
+                        referenceSolarDateTime || "no_ref_time"
+                      }`
                 }`}
                 rightActions={
                   <button
