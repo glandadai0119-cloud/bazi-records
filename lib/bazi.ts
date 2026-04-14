@@ -11,6 +11,12 @@ type DaYunOrLiuNianItem = {
   endYear: number;
   startAge: number;
   endAge: number;
+  stemShiShen: string;
+  hideGanShiShen: Array<{
+    hideGan: string;
+    shiShen: string;
+    short: string;
+  }>;
   hideGanShiShenShort: string[];
   shenSha: string[];
 };
@@ -503,18 +509,23 @@ export function getGanZhiFromBirthTime(
   const daYun = yun
     .getDaYun(10)
     .filter((item) => item.getIndex() > 0)
-    .map((item) => ({
-      index: item.getIndex(),
-      ganZhi: item.getGanZhi(),
-      startYear: item.getStartYear(),
-      endYear: item.getEndYear(),
-      startAge: item.getStartAge(),
-      endAge: item.getEndAge(),
-      hideGanShiShenShort: getHideGanShiShen(dayGan, getGanZhiParts(item.getGanZhi()).zhi).map(
-        (entry) => entry.short
-      ),
-      shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, item.getGanZhi())
-    }));
+    .map((item) => {
+      const daYunGanZhi = item.getGanZhi();
+      const { gan, zhi } = getGanZhiParts(daYunGanZhi);
+      const hideGanShiShen = getHideGanShiShen(dayGan, zhi);
+      return {
+        index: item.getIndex(),
+        ganZhi: daYunGanZhi,
+        startYear: item.getStartYear(),
+        endYear: item.getEndYear(),
+        startAge: item.getStartAge(),
+        endAge: item.getEndAge(),
+        stemShiShen: getShiShenByGan(dayGan, gan),
+        hideGanShiShen,
+        hideGanShiShenShort: hideGanShiShen.map((entry) => entry.short),
+        shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, daYunGanZhi)
+      };
+    });
   const currentYear = new Date().getFullYear();
   const now = new Date();
   const currentSolar = Solar.fromYmdHms(
@@ -535,6 +546,8 @@ export function getGanZhiFromBirthTime(
     const liuNianGanZhi = Solar.fromYmdHms(targetYear, 6, 1, 12, 0, 0)
       .getLunar()
       .getYearInGanZhiExact();
+    const { gan, zhi } = getGanZhiParts(liuNianGanZhi);
+    const hideGanShiShen = getHideGanShiShen(dayGan, zhi);
     return {
       index,
       ganZhi: liuNianGanZhi,
@@ -542,9 +555,9 @@ export function getGanZhiFromBirthTime(
       endYear: targetYear,
       startAge: targetYear - year + 1,
       endAge: targetYear - year + 1,
-      hideGanShiShenShort: getHideGanShiShen(dayGan, getGanZhiParts(liuNianGanZhi).zhi).map(
-        (entry) => entry.short
-      ),
+      stemShiShen: getShiShenByGan(dayGan, gan),
+      hideGanShiShen,
+      hideGanShiShenShort: hideGanShiShen.map((entry) => entry.short),
       shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, liuNianGanZhi)
     };
   });
