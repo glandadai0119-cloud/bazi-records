@@ -68,7 +68,18 @@ export default function ResultClient() {
     const html2canvas = (await import("html2canvas")).default;
     const canvas = await html2canvas(posterRef.current, {
       backgroundColor: "#f8fafc",
-      scale: 2
+      scale: 2,
+      ignoreElements: (element) =>
+        element.getAttribute("data-html2canvas-ignore") === "true" ||
+        element.getAttribute("data-export-controls") === "true",
+      onclone: (doc) => {
+        const controls = doc.querySelectorAll("[data-export-controls='true']");
+        controls.forEach((node) => {
+          if (node instanceof HTMLElement) {
+            node.style.display = "none";
+          }
+        });
+      }
     });
     const url = canvas.toDataURL("image/png");
     const link = document.createElement("a");
