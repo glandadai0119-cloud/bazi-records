@@ -15,7 +15,7 @@ type DaYunOrLiuNianItem = {
   shenSha: string[];
 };
 
-type GanZhiResult = {
+export type GanZhiResult = {
   year: string;
   month: string;
   day: string;

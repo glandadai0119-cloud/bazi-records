@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { BaziRecord } from "@/data/mock-records";
 import { getGanZhiFromBirthTime } from "@/lib/bazi";
-import { getStoredRecordById } from "@/lib/records-storage";
+import { getStoredRecordById, removeStoredRecordById } from "@/lib/records-storage";
+import BaziResultPanel from "@/components/bazi-result-panel";
 
 export default function ResultClient() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const recordId = searchParams.get("id") ?? "";
   const [record, setRecord] = useState<BaziRecord | null>(null);
@@ -50,15 +52,31 @@ export default function ResultClient() {
   }
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">排盘结果</h2>
-          <p className="mt-1 text-sm text-slate-600">查看已保存记录的基础排盘信息。</p>
+          <p className="mt-1 text-sm text-slate-600">查看已保存记录的专业排盘信息。</p>
         </div>
-        <Link href="/" className="text-sm font-medium text-slate-700 hover:text-slate-900">
-          返回记录列表
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              const shouldDelete = window.confirm("确定要删除这条记录吗？");
+              if (!shouldDelete) {
+                return;
+              }
+              removeStoredRecordById(record.id);
+              router.push("/");
+            }}
+            className="rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+          >
+            删除此记录
+          </button>
+          <Link href="/" className="text-sm font-medium text-slate-700 hover:text-slate-900">
+            返回记录列表
+          </Link>
+        </div>
       </div>
 
       <article className="space-y-3 rounded-xl bg-white p-6 shadow-sm">
@@ -73,20 +91,17 @@ export default function ResultClient() {
         </p>
         {record.notes ? <p className="text-sm text-slate-700">备注：{record.notes}</p> : null}
         <p className="text-xs text-slate-500">创建日期：{record.createdAt}</p>
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
-          {ganZhi ? (
-            <div className="space-y-1">
-              <p>年柱：{ganZhi.year}</p>
-              <p>月柱：{ganZhi.month}</p>
-              <p>日柱：{ganZhi.day}</p>
-              <p>时柱：{ganZhi.time}</p>
-              <p className="text-slate-500">合盘：{ganZhi.full}</p>
-            </div>
-          ) : (
-            <p className="text-slate-600">该记录缺少有效出生时间，暂无法计算排盘。</p>
-          )}
-        </div>
       </article>
+
+      {ganZhi ? (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+          <BaziResultPanel ganZhi={ganZhi} />
+        </div>
+      ) : (
+        <section className="rounded-xl bg-white p-6 text-slate-600 shadow-sm">
+          该记录缺少有效出生时间，暂无法计算排盘。
+        </section>
+      )}
     </section>
   );
 }
