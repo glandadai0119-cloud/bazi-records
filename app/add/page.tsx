@@ -44,6 +44,14 @@ const WU_SHU_DUN_START_GAN: Record<string, string> = {
   癸: "壬"
 };
 
+function getValidDizhi(tiankan: string): string[] {
+  const yangGan = ["甲", "丙", "戊", "庚", "壬"];
+  if (yangGan.includes(tiankan)) {
+    return ["子", "寅", "辰", "午", "申", "戌"];
+  }
+  return ["丑", "卯", "巳", "未", "酉", "亥"];
+}
+
 function isValidGanzhi(tiankan: string, dizhi: string): boolean {
   const ganIndex = TIAN_GAN_OPTIONS.indexOf(tiankan as (typeof TIAN_GAN_OPTIONS)[number]);
   const zhiIndex = DI_ZHI_OPTIONS.indexOf(dizhi as (typeof DI_ZHI_OPTIONS)[number]);
@@ -103,7 +111,6 @@ export default function AddRecordPage() {
   const [searchHint, setSearchHint] = useState("");
   const [hasSearchedCandidates, setHasSearchedCandidates] = useState(false);
   const [pillarWarning, setPillarWarning] = useState("");
-  const [strictRuleMode, setStrictRuleMode] = useState(false);
   const [notes, setNotes] = useState("");
   const [gender, setGender] = useState<"男" | "女">("男");
   const [isSaving, setIsSaving] = useState(false);
@@ -118,9 +125,9 @@ export default function AddRecordPage() {
   const pillarMonth = `${monthStem}${monthBranch}`;
   const pillarDay = `${dayStem}${dayBranch}`;
   const pillarTime = `${timeStem}${timeBranch}`;
-  const yearBranchOptions = DI_ZHI_OPTIONS.filter((branch) => isValidGanzhi(yearStem, branch));
+  const yearBranchOptions = getValidDizhi(yearStem);
   const yearStemOptions = TIAN_GAN_OPTIONS.filter((stem) => isValidGanzhi(stem, yearBranch));
-  const monthBranchOptions = DI_ZHI_OPTIONS.filter((branch) => isValidGanzhi(monthStem, branch));
+  const monthBranchOptions = getValidDizhi(monthStem);
   const monthStemBaseOptions = TIAN_GAN_OPTIONS.filter((stem) => isValidGanzhi(stem, monthBranch));
   const expectedMonthStem = getExpectedMonthStem(yearStem, monthBranch);
   const monthStemOptions = useMemo(
@@ -130,9 +137,9 @@ export default function AddRecordPage() {
         : monthStemBaseOptions,
     [expectedMonthStem, monthStemBaseOptions]
   );
-  const dayBranchOptions = DI_ZHI_OPTIONS.filter((branch) => isValidGanzhi(dayStem, branch));
+  const dayBranchOptions = getValidDizhi(dayStem);
   const dayStemOptions = TIAN_GAN_OPTIONS.filter((stem) => isValidGanzhi(stem, dayBranch));
-  const timeBranchOptions = DI_ZHI_OPTIONS.filter((branch) => isValidGanzhi(timeStem, branch));
+  const timeBranchOptions = getValidDizhi(timeStem);
   const timeStemBaseOptions = TIAN_GAN_OPTIONS.filter((stem) => isValidGanzhi(stem, timeBranch));
   const expectedTimeStem = getExpectedTimeStem(dayStem, timeBranch);
   const timeStemOptions = useMemo(
@@ -150,16 +157,8 @@ export default function AddRecordPage() {
     () => prioritizeRecommended(timeStemOptions, expectedTimeStem),
     [timeStemOptions, expectedTimeStem]
   );
-  const isMonthStemLocked =
-    strictRuleMode &&
-    monthStemOptions.length === 1 &&
-    Boolean(expectedMonthStem) &&
-    monthStemOptions[0] === expectedMonthStem;
-  const isTimeStemLocked =
-    strictRuleMode &&
-    timeStemOptions.length === 1 &&
-    Boolean(expectedTimeStem) &&
-    timeStemOptions[0] === expectedTimeStem;
+  const isMonthStemLocked = Boolean(expectedMonthStem);
+  const isTimeStemLocked = Boolean(expectedTimeStem);
   const ganZhi = useMemo(() => {
     if (inputMode === "pillars") {
       return getGanZhiFromPillars(
@@ -648,15 +647,6 @@ export default function AddRecordPage() {
                 </div>
               </label>
             </div>
-            <label className="inline-flex items-center gap-2 text-xs text-slate-600">
-              <input
-                type="checkbox"
-                checked={strictRuleMode}
-                onChange={(event) => setStrictRuleMode(event.target.checked)}
-                className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              />
-              严格模式（锁定月干/时干推荐结果）
-            </label>
             {pillarWarning ? <p className="text-xs text-red-500">{pillarWarning}</p> : null}
             <div className="rounded-lg border border-[#e6ded2] bg-[#fbf8f3] px-3 py-2.5">
               <div className="grid gap-3 sm:grid-cols-2">
