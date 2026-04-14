@@ -67,6 +67,13 @@ export type GanZhiResult = {
   };
 };
 
+export type PillarInput = {
+  year: string;
+  month: string;
+  day: string;
+  time: string;
+};
+
 const GAN_WU_XING_MAP: Record<string, WuXing> = {
   甲: "wood",
   乙: "wood",
@@ -550,6 +557,36 @@ export function getGanZhiFromBirthTime(
   }
 
   const solar = Solar.fromYmdHms(year, month, day, hour, minute, 0);
+  return createGanZhiResultFromSolar(solar, year, gender);
+}
+
+export function getGanZhiFromPillars(
+  pillars: PillarInput,
+  gender: "男" | "女"
+): GanZhiResult | null {
+  if (!pillars.year || !pillars.month || !pillars.day || !pillars.time) {
+    return null;
+  }
+  const solarList = Solar.fromBaZi(
+    pillars.year,
+    pillars.month,
+    pillars.day,
+    pillars.time,
+    2,
+    1900
+  );
+  if (!solarList.length) {
+    return null;
+  }
+  const solar = solarList[0];
+  return createGanZhiResultFromSolar(solar, solar.getYear(), gender);
+}
+
+function createGanZhiResultFromSolar(
+  solar: Solar,
+  birthYear: number,
+  gender: "男" | "女"
+): GanZhiResult {
   const eightChar = solar.getLunar().getEightChar();
   const dayGan = eightChar.getDayGan();
   const dayZhi = getGanZhiParts(eightChar.getDay()).zhi;
@@ -612,8 +649,8 @@ export function getGanZhiFromBirthTime(
       ganZhi: liuNianGanZhi,
       startYear: targetYear,
       endYear: targetYear,
-      startAge: targetYear - year + 1,
-      endAge: targetYear - year + 1,
+      startAge: targetYear - birthYear + 1,
+      endAge: targetYear - birthYear + 1,
       stemShiShen: getShiShenByGan(dayGan, gan),
       hideGanShiShen,
       hideGanShiShenShort: hideGanShiShen.map((entry) => entry.short),

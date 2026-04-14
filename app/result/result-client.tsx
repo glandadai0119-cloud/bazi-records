@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BaziRecord } from "@/data/mock-records";
 import { mockRecords } from "@/data/mock-records";
-import { getGanZhiFromBirthTime } from "@/lib/bazi";
+import { getGanZhiFromBirthTime, getGanZhiFromPillars } from "@/lib/bazi";
 import { getStoredRecordById, removeStoredRecordById } from "@/lib/records-storage";
 import BaziResultPanel from "@/components/bazi-result-panel";
 
@@ -34,6 +34,9 @@ export default function ResultClient() {
   const ganZhi = useMemo(() => {
     if (!record) {
       return null;
+    }
+    if (record.inputMode === "ganzhi" && record.pillars) {
+      return getGanZhiFromPillars(record.pillars, record.gender);
     }
     return getGanZhiFromBirthTime(record.birthDate, record.birthTime, record.gender);
   }, [record]);
@@ -126,7 +129,10 @@ export default function ResultClient() {
           </span>
         </div>
         <p className="text-sm text-slate-600">
-          出生时间：{record.birthDate} {record.birthTime}
+          出生时间：
+          {record.inputMode === "ganzhi" && record.pillars
+            ? ` ${record.pillars.year}年 ${record.pillars.month}月 ${record.pillars.day}日 ${record.pillars.time}时（干支录入）`
+            : ` ${record.birthDate} ${record.birthTime}`}
         </p>
         {record.notes ? <p className="text-sm text-slate-700">备注：{record.notes}</p> : null}
         <p className="text-xs text-slate-500">创建日期：{record.createdAt}</p>
@@ -139,8 +145,11 @@ export default function ResultClient() {
             basicInfo={{
               name: record.name,
               gender: record.gender,
-              birthDate: record.birthDate,
-              birthTime: record.birthTime,
+              birthDate:
+                record.inputMode === "ganzhi" && record.pillars
+                  ? `${record.pillars.year}年 ${record.pillars.month}月 ${record.pillars.day}日 ${record.pillars.time}时`
+                  : record.birthDate,
+              birthTime: record.inputMode === "ganzhi" ? "干支录入" : record.birthTime,
               createdAt: record.createdAt
             }}
             noteStorageKey={record.id}

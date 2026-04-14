@@ -50,7 +50,10 @@ export default function RecordList({ records, onDelete }: RecordListProps) {
             </div>
           </div>
           <p className="text-sm text-slate-600">
-            出生时间：{record.birthDate} {record.birthTime}
+            出生时间：
+            {record.inputMode === "ganzhi" && record.pillars
+              ? ` ${record.pillars.year}年 ${record.pillars.month}月 ${record.pillars.day}日 ${record.pillars.time}时（干支录入）`
+              : ` ${record.birthDate} ${record.birthTime}`}
           </p>
           <p className="mt-2 text-sm text-slate-700">{record.notes}</p>
           <p className="mt-3 text-xs text-slate-500">创建日期：{record.createdAt}</p>

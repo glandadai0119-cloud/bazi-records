@@ -49,6 +49,14 @@ declare module "lunar-javascript" {
   }
 
   export class Solar {
+    static fromBaZi(
+      yearGanZhi: string,
+      monthGanZhi: string,
+      dayGanZhi: string,
+      timeGanZhi: string,
+      sect?: 1 | 2,
+      baseYear?: number
+    ): Solar[];
     static fromYmdHms(
       year: number,
       month: number,
@@ -57,6 +65,7 @@ declare module "lunar-javascript" {
       minute: number,
       second: number
     ): Solar;
+    getYear(): number;
     getLunar(): Lunar;
   }
 }

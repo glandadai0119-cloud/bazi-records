@@ -4,6 +4,13 @@ export type BaziRecord = {
   gender: "男" | "女";
   birthDate: string;
   birthTime: string;
+  inputMode?: "date" | "ganzhi";
+  pillars?: {
+    year: string;
+    month: string;
+    day: string;
+    time: string;
+  };
   notes: string;
   createdAt: string;
 };

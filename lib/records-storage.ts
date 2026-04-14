@@ -23,12 +23,26 @@ export function getStoredRecords(): BaziRecord[] {
         return false;
       }
       const record = item as Record<string, unknown>;
+      const isValidInputMode =
+        record.inputMode === undefined ||
+        record.inputMode === "date" ||
+        record.inputMode === "ganzhi";
+      const pillars = record.pillars as Record<string, unknown> | undefined;
+      const hasValidPillars =
+        pillars === undefined ||
+        (typeof pillars === "object" &&
+          typeof pillars.year === "string" &&
+          typeof pillars.month === "string" &&
+          typeof pillars.day === "string" &&
+          typeof pillars.time === "string");
       return (
         typeof record.id === "string" &&
         typeof record.name === "string" &&
         (record.gender === "男" || record.gender === "女") &&
         typeof record.birthDate === "string" &&
         typeof record.birthTime === "string" &&
+        isValidInputMode &&
+        hasValidPillars &&
         typeof record.notes === "string" &&
         typeof record.createdAt === "string"
       );

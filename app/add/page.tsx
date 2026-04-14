@@ -3,31 +3,51 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getGanZhiFromBirthTime } from "@/lib/bazi";
+import { getGanZhiFromBirthTime, getGanZhiFromPillars } from "@/lib/bazi";
 import type { BaziRecord } from "@/data/mock-records";
 import { appendRecord } from "@/lib/records-storage";
 import BaziResultPanel from "@/components/bazi-result-panel";
+import { JIA_ZI_OPTIONS } from "@/lib/ganzhi-options";
 
 export default function AddRecordPage() {
   const router = useRouter();
   const resultPosterRef = useRef<HTMLDivElement | null>(null);
   const [name, setName] = useState("");
+  const [inputMode, setInputMode] = useState<"date" | "ganzhi">("date");
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
+  const [pillarYear, setPillarYear] = useState("甲子");
+  const [pillarMonth, setPillarMonth] = useState("甲子");
+  const [pillarDay, setPillarDay] = useState("甲子");
+  const [pillarTime, setPillarTime] = useState("甲子");
   const [notes, setNotes] = useState("");
   const [gender, setGender] = useState<"男" | "女">("男");
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
-  const ganZhi = useMemo(
-    () => getGanZhiFromBirthTime(birthDate, birthTime, gender),
-    [birthDate, birthTime, gender]
-  );
+  const ganZhi = useMemo(() => {
+    if (inputMode === "ganzhi") {
+      return getGanZhiFromPillars(
+        {
+          year: pillarYear,
+          month: pillarMonth,
+          day: pillarDay,
+          time: pillarTime
+        },
+        gender
+      );
+    }
+    return getGanZhiFromBirthTime(birthDate, birthTime, gender);
+  }, [inputMode, pillarYear, pillarMonth, pillarDay, pillarTime, birthDate, birthTime, gender]);
 
   const handleSaveRecord = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!name.trim() || !birthDate || !birthTime) {
-      setSaveMessage("请先完整填写姓名、出生日期和出生时间。");
+    if (!name.trim()) {
+      setSaveMessage("请先填写姓名。");
+      return;
+    }
+    if (inputMode === "date" && (!birthDate || !birthTime)) {
+      setSaveMessage("日期模式下请完整填写出生日期和出生时间。");
       return;
     }
     setIsSaving(true);
@@ -35,8 +55,18 @@ export default function AddRecordPage() {
       id: `${Date.now()}`,
       name: name.trim(),
       gender,
-      birthDate,
-      birthTime,
+      birthDate: inputMode === "date" ? birthDate : "",
+      birthTime: inputMode === "date" ? birthTime : "",
+      inputMode,
+      pillars:
+        inputMode === "ganzhi"
+          ? {
+              year: pillarYear,
+              month: pillarMonth,
+              day: pillarDay,
+              time: pillarTime
+            }
+          : undefined,
       notes: notes.trim(),
       createdAt: new Date().toISOString().slice(0, 10)
     };
@@ -116,30 +146,117 @@ export default function AddRecordPage() {
             </select>
           </label>
         </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-2 text-sm">
-            出生日期
-            <input
-              name="birthDate"
-              type="date"
-              value={birthDate}
-              onChange={(event) => setBirthDate(event.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-300 focus:ring"
-            />
-          </label>
-
-          <label className="grid gap-2 text-sm">
-            出生时间
-            <input
-              name="birthTime"
-              type="time"
-              value={birthTime}
-              onChange={(event) => setBirthTime(event.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-300 focus:ring"
-            />
-          </label>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <button
+              type="button"
+              onClick={() => setInputMode("date")}
+              className={`rounded-md px-3 py-2 transition ${
+                inputMode === "date"
+                  ? "bg-slate-900 text-white"
+                  : "bg-white text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              日期模式
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode("ganzhi")}
+              className={`rounded-md px-3 py-2 transition ${
+                inputMode === "ganzhi"
+                  ? "bg-slate-900 text-white"
+                  : "bg-white text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              干支模式
+            </button>
+          </div>
         </div>
+
+        {inputMode === "date" ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm">
+              出生日期
+              <input
+                name="birthDate"
+                type="date"
+                value={birthDate}
+                onChange={(event) => setBirthDate(event.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-300 focus:ring"
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm">
+              出生时间
+              <input
+                name="birthTime"
+                type="time"
+                value={birthTime}
+                onChange={(event) => setBirthTime(event.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-300 focus:ring"
+              />
+            </label>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm">
+              年柱
+              <select
+                value={pillarYear}
+                onChange={(event) => setPillarYear(event.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-3 text-base outline-none ring-slate-300 focus:ring"
+              >
+                {JIA_ZI_OPTIONS.map((option) => (
+                  <option key={`year-${option}`} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm">
+              月柱
+              <select
+                value={pillarMonth}
+                onChange={(event) => setPillarMonth(event.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-3 text-base outline-none ring-slate-300 focus:ring"
+              >
+                {JIA_ZI_OPTIONS.map((option) => (
+                  <option key={`month-${option}`} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm">
+              日柱
+              <select
+                value={pillarDay}
+                onChange={(event) => setPillarDay(event.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-3 text-base outline-none ring-slate-300 focus:ring"
+              >
+                {JIA_ZI_OPTIONS.map((option) => (
+                  <option key={`day-${option}`} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm">
+              时柱
+              <select
+                value={pillarTime}
+                onChange={(event) => setPillarTime(event.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-3 text-base outline-none ring-slate-300 focus:ring"
+              >
+                {JIA_ZI_OPTIONS.map((option) => (
+                  <option key={`time-${option}`} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
 
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
           {ganZhi ? (
@@ -152,10 +269,17 @@ export default function AddRecordPage() {
                 basicInfo={{
                   name: name.trim(),
                   gender,
-                  birthDate,
-                  birthTime
+                  birthDate:
+                    inputMode === "date"
+                      ? birthDate
+                      : `${pillarYear}年 ${pillarMonth}月 ${pillarDay}日 ${pillarTime}时`,
+                  birthTime: inputMode === "date" ? birthTime : "干支录入"
                 }}
-                noteStorageKey={`draft_${name.trim() || "guest"}_${birthDate}_${birthTime}`}
+                noteStorageKey={`draft_${name.trim() || "guest"}_${inputMode}_${
+                  inputMode === "date"
+                    ? `${birthDate}_${birthTime}`
+                    : `${pillarYear}_${pillarMonth}_${pillarDay}_${pillarTime}`
+                }`}
                 rightActions={
                   <button
                     type="button"
