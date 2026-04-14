@@ -51,3 +51,11 @@ export function appendRecord(record: BaziRecord): BaziRecord[] {
   saveRecords(next);
   return next;
 }
+
+export function getStoredRecordById(id: string): BaziRecord | null {
+  if (!id) {
+    return null;
+  }
+  const records = getStoredRecords();
+  return records.find((record) => record.id === id) ?? null;
+}
