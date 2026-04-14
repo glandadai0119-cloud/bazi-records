@@ -13,7 +13,65 @@ import {
 import type { BaziRecord } from "@/data/mock-records";
 import { appendRecord } from "@/lib/records-storage";
 import BaziResultPanel from "@/components/bazi-result-panel";
-import { JIA_ZI_OPTIONS } from "@/lib/ganzhi-options";
+
+const TIAN_GAN_OPTIONS = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"] as const;
+const DI_ZHI_OPTIONS = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"] as const;
+const MONTH_BRANCH_ORDER = ["寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑"] as const;
+
+const WU_HU_DUN_START_GAN: Record<string, string> = {
+  甲: "丙",
+  己: "丙",
+  乙: "戊",
+  庚: "戊",
+  丙: "庚",
+  辛: "庚",
+  丁: "壬",
+  壬: "壬",
+  戊: "甲",
+  癸: "甲"
+};
+
+const WU_SHU_DUN_START_GAN: Record<string, string> = {
+  甲: "甲",
+  己: "甲",
+  乙: "丙",
+  庚: "丙",
+  丙: "戊",
+  辛: "戊",
+  丁: "庚",
+  壬: "庚",
+  戊: "壬",
+  癸: "壬"
+};
+
+function isValidGanzhi(tiankan: string, dizhi: string): boolean {
+  const ganIndex = TIAN_GAN_OPTIONS.indexOf(tiankan as (typeof TIAN_GAN_OPTIONS)[number]);
+  const zhiIndex = DI_ZHI_OPTIONS.indexOf(dizhi as (typeof DI_ZHI_OPTIONS)[number]);
+  if (ganIndex < 0 || zhiIndex < 0) {
+    return false;
+  }
+  return ganIndex % 2 === zhiIndex % 2;
+}
+
+function getExpectedMonthStem(yearStem: string, monthBranch: string): string | null {
+  const startGan = WU_HU_DUN_START_GAN[yearStem];
+  const monthIndex = MONTH_BRANCH_ORDER.indexOf(monthBranch as (typeof MONTH_BRANCH_ORDER)[number]);
+  if (!startGan || monthIndex < 0) {
+    return null;
+  }
+  const startGanIndex = TIAN_GAN_OPTIONS.indexOf(startGan as (typeof TIAN_GAN_OPTIONS)[number]);
+  return TIAN_GAN_OPTIONS[(startGanIndex + monthIndex) % 10];
+}
+
+function getExpectedTimeStem(dayStem: string, timeBranch: string): string | null {
+  const startGan = WU_SHU_DUN_START_GAN[dayStem];
+  const timeIndex = DI_ZHI_OPTIONS.indexOf(timeBranch as (typeof DI_ZHI_OPTIONS)[number]);
+  if (!startGan || timeIndex < 0) {
+    return null;
+  }
+  const startGanIndex = TIAN_GAN_OPTIONS.indexOf(startGan as (typeof TIAN_GAN_OPTIONS)[number]);
+  return TIAN_GAN_OPTIONS[(startGanIndex + timeIndex) % 10];
+}
 
 export default function AddRecordPage() {
   const router = useRouter();
@@ -22,10 +80,14 @@ export default function AddRecordPage() {
   const [inputMode, setInputMode] = useState<"solar" | "lunar" | "pillars">("solar");
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
-  const [pillarYear, setPillarYear] = useState("甲子");
-  const [pillarMonth, setPillarMonth] = useState("甲子");
-  const [pillarDay, setPillarDay] = useState("甲子");
-  const [pillarTime, setPillarTime] = useState("甲子");
+  const [yearStem, setYearStem] = useState("甲");
+  const [yearBranch, setYearBranch] = useState("子");
+  const [monthStem, setMonthStem] = useState("丙");
+  const [monthBranch, setMonthBranch] = useState("寅");
+  const [dayStem, setDayStem] = useState("甲");
+  const [dayBranch, setDayBranch] = useState("子");
+  const [timeStem, setTimeStem] = useState("甲");
+  const [timeBranch, setTimeBranch] = useState("子");
   const [referenceSolarDateTime, setReferenceSolarDateTime] = useState("");
   const [referenceYear, setReferenceYear] = useState(`${new Date().getFullYear()}`);
   const [searchStartYear, setSearchStartYear] = useState("1900");
@@ -33,6 +95,7 @@ export default function AddRecordPage() {
   const [candidateDateTimes, setCandidateDateTimes] = useState<PillarSolarCandidate[]>([]);
   const [searchHint, setSearchHint] = useState("");
   const [hasSearchedCandidates, setHasSearchedCandidates] = useState(false);
+  const [pillarWarning, setPillarWarning] = useState("");
   const [notes, setNotes] = useState("");
   const [gender, setGender] = useState<"男" | "女">("男");
   const [isSaving, setIsSaving] = useState(false);
@@ -43,6 +106,34 @@ export default function AddRecordPage() {
     (referenceYear && !Number.isNaN(Number(referenceYear))
       ? `${referenceYear}-01-01T12:00`
       : "");
+  const pillarYear = `${yearStem}${yearBranch}`;
+  const pillarMonth = `${monthStem}${monthBranch}`;
+  const pillarDay = `${dayStem}${dayBranch}`;
+  const pillarTime = `${timeStem}${timeBranch}`;
+  const yearBranchOptions = DI_ZHI_OPTIONS.filter((branch) => isValidGanzhi(yearStem, branch));
+  const yearStemOptions = TIAN_GAN_OPTIONS.filter((stem) => isValidGanzhi(stem, yearBranch));
+  const monthBranchOptions = DI_ZHI_OPTIONS.filter((branch) => isValidGanzhi(monthStem, branch));
+  const monthStemBaseOptions = TIAN_GAN_OPTIONS.filter((stem) => isValidGanzhi(stem, monthBranch));
+  const expectedMonthStem = getExpectedMonthStem(yearStem, monthBranch);
+  const monthStemOptions = useMemo(
+    () =>
+      expectedMonthStem && monthStemBaseOptions.includes(expectedMonthStem)
+        ? [expectedMonthStem]
+        : monthStemBaseOptions,
+    [expectedMonthStem, monthStemBaseOptions]
+  );
+  const dayBranchOptions = DI_ZHI_OPTIONS.filter((branch) => isValidGanzhi(dayStem, branch));
+  const dayStemOptions = TIAN_GAN_OPTIONS.filter((stem) => isValidGanzhi(stem, dayBranch));
+  const timeBranchOptions = DI_ZHI_OPTIONS.filter((branch) => isValidGanzhi(timeStem, branch));
+  const timeStemBaseOptions = TIAN_GAN_OPTIONS.filter((stem) => isValidGanzhi(stem, timeBranch));
+  const expectedTimeStem = getExpectedTimeStem(dayStem, timeBranch);
+  const timeStemOptions = useMemo(
+    () =>
+      expectedTimeStem && timeStemBaseOptions.includes(expectedTimeStem)
+        ? [expectedTimeStem]
+        : timeStemBaseOptions,
+    [expectedTimeStem, timeStemBaseOptions]
+  );
   const ganZhi = useMemo(() => {
     if (inputMode === "pillars") {
       return getGanZhiFromPillars(
@@ -154,6 +245,70 @@ export default function AddRecordPage() {
     }
     handleFindCandidateYears();
   }, [inputMode, handleFindCandidateYears]);
+
+  useEffect(() => {
+    if (!yearBranchOptions.includes(yearBranch as (typeof DI_ZHI_OPTIONS)[number])) {
+      const fallback = yearBranchOptions[0];
+      setYearBranch(fallback);
+      setPillarWarning(`年柱组合不合法，已自动修正为 ${yearStem}${fallback}。`);
+    }
+  }, [yearStem, yearBranch, yearBranchOptions]);
+
+  useEffect(() => {
+    if (!yearStemOptions.includes(yearStem as (typeof TIAN_GAN_OPTIONS)[number])) {
+      const fallback = yearStemOptions[0];
+      setYearStem(fallback);
+      setPillarWarning(`年柱组合不合法，已自动修正为 ${fallback}${yearBranch}。`);
+    }
+  }, [yearBranch, yearStem, yearStemOptions]);
+
+  useEffect(() => {
+    if (!dayBranchOptions.includes(dayBranch as (typeof DI_ZHI_OPTIONS)[number])) {
+      const fallback = dayBranchOptions[0];
+      setDayBranch(fallback);
+      setPillarWarning(`日柱组合不合法，已自动修正为 ${dayStem}${fallback}。`);
+    }
+  }, [dayStem, dayBranch, dayBranchOptions]);
+
+  useEffect(() => {
+    if (!dayStemOptions.includes(dayStem as (typeof TIAN_GAN_OPTIONS)[number])) {
+      const fallback = dayStemOptions[0];
+      setDayStem(fallback);
+      setPillarWarning(`日柱组合不合法，已自动修正为 ${fallback}${dayBranch}。`);
+    }
+  }, [dayBranch, dayStem, dayStemOptions]);
+
+  useEffect(() => {
+    if (!monthBranchOptions.includes(monthBranch as (typeof DI_ZHI_OPTIONS)[number])) {
+      const fallback = monthBranchOptions[0];
+      setMonthBranch(fallback);
+      setPillarWarning(`月柱地支不合法，已自动修正为 ${monthStem}${fallback}。`);
+    }
+  }, [monthStem, monthBranch, monthBranchOptions]);
+
+  useEffect(() => {
+    if (!monthStemOptions.includes(monthStem as (typeof TIAN_GAN_OPTIONS)[number])) {
+      const fallback = monthStemOptions[0];
+      setMonthStem(fallback);
+      setPillarWarning(`月柱已按五虎遁规则自动修正为 ${fallback}${monthBranch}。`);
+    }
+  }, [monthStem, monthBranch, monthStemOptions]);
+
+  useEffect(() => {
+    if (!timeBranchOptions.includes(timeBranch as (typeof DI_ZHI_OPTIONS)[number])) {
+      const fallback = timeBranchOptions[0];
+      setTimeBranch(fallback);
+      setPillarWarning(`时柱地支不合法，已自动修正为 ${timeStem}${fallback}。`);
+    }
+  }, [timeStem, timeBranch, timeBranchOptions]);
+
+  useEffect(() => {
+    if (!timeStemOptions.includes(timeStem as (typeof TIAN_GAN_OPTIONS)[number])) {
+      const fallback = timeStemOptions[0];
+      setTimeStem(fallback);
+      setPillarWarning(`时柱已按五鼠遁规则自动修正为 ${fallback}${timeBranch}。`);
+    }
+  }, [timeStem, timeBranch, timeStemOptions]);
 
   const closestCandidateValue = useMemo(() => {
     if (!candidateDateTimes.length) {
@@ -320,61 +475,114 @@ export default function AddRecordPage() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <label className="grid gap-2 text-sm">
                 年柱
-                <select
-                  value={pillarYear}
-                  onChange={(event) => setPillarYear(event.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
-                >
-                  {JIA_ZI_OPTIONS.map((option) => (
-                    <option key={`year-${option}`} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <select
+                    value={yearStem}
+                    onChange={(event) => setYearStem(event.target.value)}
+                    className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                  >
+                    {yearStemOptions.map((option) => (
+                      <option key={`year-stem-${option}`} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={yearBranch}
+                    onChange={(event) => setYearBranch(event.target.value)}
+                    className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                  >
+                    {yearBranchOptions.map((option) => (
+                      <option key={`year-branch-${option}`} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </label>
               <label className="grid gap-2 text-sm">
                 月柱
-                <select
-                  value={pillarMonth}
-                  onChange={(event) => setPillarMonth(event.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
-                >
-                  {JIA_ZI_OPTIONS.map((option) => (
-                    <option key={`month-${option}`} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <select
+                    value={monthStem}
+                    onChange={(event) => setMonthStem(event.target.value)}
+                    className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                  >
+                    {monthStemOptions.map((option) => (
+                      <option key={`month-stem-${option}`} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={monthBranch}
+                    onChange={(event) => setMonthBranch(event.target.value)}
+                    className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                  >
+                    {monthBranchOptions.map((option) => (
+                      <option key={`month-branch-${option}`} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </label>
               <label className="grid gap-2 text-sm">
                 日柱
-                <select
-                  value={pillarDay}
-                  onChange={(event) => setPillarDay(event.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
-                >
-                  {JIA_ZI_OPTIONS.map((option) => (
-                    <option key={`day-${option}`} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <select
+                    value={dayStem}
+                    onChange={(event) => setDayStem(event.target.value)}
+                    className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                  >
+                    {dayStemOptions.map((option) => (
+                      <option key={`day-stem-${option}`} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={dayBranch}
+                    onChange={(event) => setDayBranch(event.target.value)}
+                    className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                  >
+                    {dayBranchOptions.map((option) => (
+                      <option key={`day-branch-${option}`} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </label>
               <label className="grid gap-2 text-sm">
                 时柱
-                <select
-                  value={pillarTime}
-                  onChange={(event) => setPillarTime(event.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
-                >
-                  {JIA_ZI_OPTIONS.map((option) => (
-                    <option key={`time-${option}`} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <select
+                    value={timeStem}
+                    onChange={(event) => setTimeStem(event.target.value)}
+                    className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                  >
+                    {timeStemOptions.map((option) => (
+                      <option key={`time-stem-${option}`} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={timeBranch}
+                    onChange={(event) => setTimeBranch(event.target.value)}
+                    className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
+                  >
+                    {timeBranchOptions.map((option) => (
+                      <option key={`time-branch-${option}`} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </label>
             </div>
+            {pillarWarning ? <p className="text-xs text-red-500">{pillarWarning}</p> : null}
             <div className="rounded-lg border border-[#e6ded2] bg-[#fbf8f3] px-3 py-2.5">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="grid gap-1.5 text-sm">
