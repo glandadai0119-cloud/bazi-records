@@ -1,8 +1,35 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import RecordList from "@/components/record-list";
-import { mockRecords } from "@/data/mock-records";
+import { mockRecords, type BaziRecord } from "@/data/mock-records";
+import { getStoredRecords } from "@/lib/records-storage";
 
 export default function HomePage() {
+  const [records, setRecords] = useState<BaziRecord[]>([]);
+  const [hasHydrated, setHasHydrated] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const stored = getStoredRecords();
+    if (stored.length > 0) {
+      setRecords(stored);
+    } else {
+      setRecords(mockRecords);
+    }
+    setHasHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydrated || typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem("bazi_records", JSON.stringify(records));
+  }, [records, hasHydrated]);
+
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
@@ -17,7 +44,7 @@ export default function HomePage() {
           添加记录
         </Link>
       </div>
-      <RecordList records={mockRecords} />
+      <RecordList records={records} />
     </section>
   );
 }

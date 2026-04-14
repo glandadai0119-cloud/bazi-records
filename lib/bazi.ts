@@ -43,6 +43,18 @@ type GanZhiResult = {
   currentLiuNian: string;
   liuNian: DaYunOrLiuNianItem[];
   currentLiuNianDetail: DaYunOrLiuNianItem | null;
+  patternAnalysis: {
+    patternName: string;
+    dayMasterStrength: "偏强" | "中和" | "偏弱";
+    favorableElements: string[];
+    summary: string;
+  };
+  pillarShenSha: {
+    year: string[];
+    month: string[];
+    day: string[];
+    time: string[];
+  };
 };
 
 const GAN_WU_XING_MAP: Record<string, WuXing> = {
@@ -56,6 +68,21 @@ const GAN_WU_XING_MAP: Record<string, WuXing> = {
   辛: "metal",
   壬: "water",
   癸: "water"
+};
+
+const ZHI_WU_XING_MAP: Record<string, WuXing> = {
+  寅: "wood",
+  卯: "wood",
+  巳: "fire",
+  午: "fire",
+  辰: "earth",
+  戌: "earth",
+  丑: "earth",
+  未: "earth",
+  申: "metal",
+  酉: "metal",
+  亥: "water",
+  子: "water"
 };
 
 const GAN_YIN_YANG_MAP: Record<string, GanYinYang> = {
@@ -158,7 +185,51 @@ const SHEN_SHA_PRIORITY: Record<string, number> = {
   天乙贵人: 1,
   太极贵人: 2,
   禄神: 3,
-  羊刃: 4
+  羊刃: 4,
+  天医: 5,
+  将星: 6,
+  华盖: 7,
+  空亡: 8
+};
+
+const ZHI_INDEX_MAP: Record<string, number> = {
+  子: 0,
+  丑: 1,
+  寅: 2,
+  卯: 3,
+  辰: 4,
+  巳: 5,
+  午: 6,
+  未: 7,
+  申: 8,
+  酉: 9,
+  戌: 10,
+  亥: 11
+};
+
+const ZHI_LIST = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
+
+const TIAN_YI_BY_MONTH_ZHI_MAP: Record<string, string> = {
+  寅: "丑",
+  卯: "寅",
+  辰: "卯",
+  巳: "辰",
+  午: "巳",
+  未: "午",
+  申: "未",
+  酉: "申",
+  戌: "酉",
+  亥: "戌",
+  子: "亥",
+  丑: "子"
+};
+
+const WU_XING_CN_MAP: Record<WuXing, string> = {
+  wood: "木",
+  fire: "火",
+  earth: "土",
+  metal: "金",
+  water: "水"
 };
 
 function getGanZhiParts(ganZhi: string): { gan: string; zhi: string } {
@@ -203,6 +274,109 @@ function getShiShenShortName(shiShen: string): string {
   return shiShen;
 }
 
+function getPatternNameByMonth(dayGan: string, monthZhi: string): string {
+  const monthHideGan = ZHI_HIDE_GAN_MAP[monthZhi] ?? [];
+  const monthMainGan = monthHideGan[0] ?? "";
+  const shiShen = getShiShenByGan(dayGan, monthMainGan);
+  const map: Record<string, string> = {
+    正官: "正官格",
+    七杀: "七杀格",
+    正财: "正财格",
+    偏财: "偏财格",
+    食神: "食神格",
+    伤官: "伤官格",
+    正印: "正印格",
+    偏印: "偏印格",
+    比肩: "建禄格",
+    劫财: "劫财格"
+  };
+  return map[shiShen] ?? "平常格";
+}
+
+function getDayMasterStrength(
+  dayGan: string,
+  pillars: Array<{ gan: string; zhi: string }>
+): "偏强" | "中和" | "偏弱" {
+  const dayElement = GAN_WU_XING_MAP[dayGan];
+  if (!dayElement) {
+    return "中和";
+  }
+  const resourceElement = Object.entries(ELEMENT_GENERATES).find(
+    ([, generated]) => generated === dayElement
+  )?.[0] as WuXing | undefined;
+  const controllerElement = Object.entries(ELEMENT_CONTROLS).find(
+    ([, controlled]) => controlled === dayElement
+  )?.[0] as WuXing | undefined;
+  const wealthElement = ELEMENT_CONTROLS[dayElement];
+  const outputElement = ELEMENT_GENERATES[dayElement];
+
+  const score = pillars.reduce((total, pillar) => {
+    const ganElement = GAN_WU_XING_MAP[pillar.gan];
+    const zhiElement = ZHI_WU_XING_MAP[pillar.zhi];
+    let current = total;
+    if (ganElement === dayElement) current += 2;
+    if (zhiElement === dayElement) current += 1;
+    if (resourceElement && ganElement === resourceElement) current += 2;
+    if (resourceElement && zhiElement === resourceElement) current += 1;
+    if (controllerElement && ganElement === controllerElement) current -= 2;
+    if (controllerElement && zhiElement === controllerElement) current -= 1;
+    if (ganElement === wealthElement) current -= 1;
+    if (zhiElement === wealthElement) current -= 1;
+    if (ganElement === outputElement) current -= 1;
+    if (zhiElement === outputElement) current -= 1;
+    return current;
+  }, 0);
+
+  if (score >= 2) return "偏强";
+  if (score <= -2) return "偏弱";
+  return "中和";
+}
+
+function inferFavorableElements(
+  dayGan: string,
+  strength: "偏强" | "中和" | "偏弱"
+): string[] {
+  const dayElement = GAN_WU_XING_MAP[dayGan];
+  if (!dayElement) {
+    return [];
+  }
+  const resourceElement = Object.entries(ELEMENT_GENERATES).find(
+    ([, generated]) => generated === dayElement
+  )?.[0] as WuXing | undefined;
+  const controllerElement = Object.entries(ELEMENT_CONTROLS).find(
+    ([, controlled]) => controlled === dayElement
+  )?.[0] as WuXing | undefined;
+  const outputElement = ELEMENT_GENERATES[dayElement];
+  const wealthElement = ELEMENT_CONTROLS[dayElement];
+
+  if (strength === "偏弱") {
+    return [dayElement, resourceElement ?? dayElement].map(
+      (item) => WU_XING_CN_MAP[item]
+    );
+  }
+  if (strength === "偏强") {
+    return [outputElement, wealthElement, controllerElement ?? outputElement]
+      .filter((item, index, list) => list.indexOf(item) === index)
+      .map((item) => WU_XING_CN_MAP[item]);
+  }
+  return [dayElement, outputElement, wealthElement]
+    .filter((item, index, list) => list.indexOf(item) === index)
+    .map((item) => WU_XING_CN_MAP[item]);
+}
+
+function getPatternSummary(
+  patternName: string,
+  strength: "偏强" | "中和" | "偏弱"
+): string {
+  if (strength === "偏强") {
+    return `此命造为${patternName}，日主偏强，格局成象，宜取泄耗制化，主行事有担当。`;
+  }
+  if (strength === "偏弱") {
+    return `此命造为${patternName}，日主偏弱，需得生扶助身，格局方稳，主先蓄势后发。`;
+  }
+  return `此命造为${patternName}，日主中和，格局较稳，五行流转有序，主进退有度。`;
+}
+
 /**
  * 根据日干和地支，输出地支藏干对应的十神信息。
  */
@@ -221,10 +395,41 @@ function getHideGanShiShen(
   });
 }
 
-/**
- * 根据日干与目标干支判断常用神煞。
- */
-function getShenShaTags(dayGan: string, ganZhi: string): string[] {
+function getJiangXing(dayZhi: string): string {
+  if (["申", "子", "辰"].includes(dayZhi)) return "子";
+  if (["寅", "午", "戌"].includes(dayZhi)) return "午";
+  if (["亥", "卯", "未"].includes(dayZhi)) return "卯";
+  return "酉";
+}
+
+function getHuaGai(dayZhi: string): string {
+  if (["申", "子", "辰"].includes(dayZhi)) return "辰";
+  if (["寅", "午", "戌"].includes(dayZhi)) return "戌";
+  if (["亥", "卯", "未"].includes(dayZhi)) return "未";
+  return "丑";
+}
+
+function getKongWangZhi(dayGanZhi: string): string[] {
+  const { gan, zhi } = getGanZhiParts(dayGanZhi);
+  const ganIndex = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"].indexOf(gan);
+  const zhiIndex = ZHI_INDEX_MAP[zhi];
+  if (ganIndex < 0 || zhiIndex === undefined) {
+    return [];
+  }
+  const diff = (zhiIndex - ganIndex + 12) % 12;
+  const xunStartIndex = (12 + zhiIndex - diff) % 12;
+  const kongWang1 = ZHI_LIST[(xunStartIndex + 10) % 12];
+  const kongWang2 = ZHI_LIST[(xunStartIndex + 11) % 12];
+  return [kongWang1, kongWang2];
+}
+
+function getShenShaTags(
+  dayGan: string,
+  dayZhi: string,
+  monthZhi: string,
+  dayGanZhi: string,
+  ganZhi: string
+): string[] {
   const { zhi } = getGanZhiParts(ganZhi);
   const tags: string[] = [];
   if ((TIAN_YI_GUI_REN_ZHI_MAP[dayGan] ?? []).includes(zhi)) {
@@ -238,6 +443,18 @@ function getShenShaTags(dayGan: string, ganZhi: string): string[] {
   }
   if (YANG_REN_ZHI_MAP[dayGan] === zhi) {
     tags.push("羊刃");
+  }
+  if (TIAN_YI_BY_MONTH_ZHI_MAP[monthZhi] === zhi) {
+    tags.push("天医");
+  }
+  if (getJiangXing(dayZhi) === zhi) {
+    tags.push("将星");
+  }
+  if (getHuaGai(dayZhi) === zhi) {
+    tags.push("华盖");
+  }
+  if (getKongWangZhi(dayGanZhi).includes(zhi)) {
+    tags.push("空亡");
   }
   return Array.from(new Set(tags)).sort(
     (left, right) =>
@@ -270,6 +487,18 @@ export function getGanZhiFromBirthTime(
   const solar = Solar.fromYmdHms(year, month, day, hour, minute, 0);
   const eightChar = solar.getLunar().getEightChar();
   const dayGan = eightChar.getDayGan();
+  const dayZhi = getGanZhiParts(eightChar.getDay()).zhi;
+  const monthZhi = getGanZhiParts(eightChar.getMonth()).zhi;
+  const dayGanZhi = eightChar.getDay();
+  const pillars = [
+    getGanZhiParts(eightChar.getYear()),
+    getGanZhiParts(eightChar.getMonth()),
+    getGanZhiParts(eightChar.getDay()),
+    getGanZhiParts(eightChar.getTime())
+  ];
+  const patternName = getPatternNameByMonth(dayGan, pillars[1].zhi);
+  const dayMasterStrength = getDayMasterStrength(dayGan, pillars);
+  const favorableElements = inferFavorableElements(dayGan, dayMasterStrength);
   const yun = eightChar.getYun(gender === "男" ? 1 : 0, 1);
   const daYun = yun
     .getDaYun(10)
@@ -284,7 +513,7 @@ export function getGanZhiFromBirthTime(
       hideGanShiShenShort: getHideGanShiShen(dayGan, getGanZhiParts(item.getGanZhi()).zhi).map(
         (entry) => entry.short
       ),
-      shenSha: getShenShaTags(dayGan, item.getGanZhi())
+      shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, item.getGanZhi())
     }));
   const currentYear = new Date().getFullYear();
   const now = new Date();
@@ -316,7 +545,7 @@ export function getGanZhiFromBirthTime(
       hideGanShiShenShort: getHideGanShiShen(dayGan, getGanZhiParts(liuNianGanZhi).zhi).map(
         (entry) => entry.short
       ),
-      shenSha: getShenShaTags(dayGan, liuNianGanZhi)
+      shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, liuNianGanZhi)
     };
   });
   const currentLiuNianDetail =
@@ -354,6 +583,18 @@ export function getGanZhiFromBirthTime(
     currentDaYun,
     currentLiuNian: currentSolar.getLunar().getYearInGanZhiExact(),
     liuNian,
-    currentLiuNianDetail
+    currentLiuNianDetail,
+    patternAnalysis: {
+      patternName,
+      dayMasterStrength,
+      favorableElements,
+      summary: getPatternSummary(patternName, dayMasterStrength)
+    },
+    pillarShenSha: {
+      year: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, eightChar.getYear()),
+      month: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, eightChar.getMonth()),
+      day: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, eightChar.getDay()),
+      time: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, eightChar.getTime())
+    }
   };
 }
