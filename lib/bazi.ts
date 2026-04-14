@@ -598,14 +598,19 @@ export function getGanZhiFromPillars(
   if (!pillars.year || !pillars.month || !pillars.day || !pillars.time) {
     return null;
   }
-  const solarList = Solar.fromBaZi(
-    pillars.year,
-    pillars.month,
-    pillars.day,
-    pillars.time,
-    2,
-    1900
-  );
+  let solarList: Solar[] = [];
+  try {
+    solarList = Solar.fromBaZi(
+      pillars.year,
+      pillars.month,
+      pillars.day,
+      pillars.time,
+      2,
+      1900
+    );
+  } catch {
+    return null;
+  }
   if (!solarList.length) {
     return null;
   }
@@ -631,14 +636,19 @@ export function findSolarCandidatesByPillars(
   if (Number.isNaN(startYear) || Number.isNaN(endYear) || startYear > endYear) {
     return [];
   }
-  const solarList = Solar.fromBaZi(
-    pillars.year,
-    pillars.month,
-    pillars.day,
-    pillars.time,
-    2,
-    startYear
-  );
+  let solarList: Solar[] = [];
+  try {
+    solarList = Solar.fromBaZi(
+      pillars.year,
+      pillars.month,
+      pillars.day,
+      pillars.time,
+      2,
+      startYear
+    );
+  } catch {
+    return [];
+  }
   const filtered = solarList
     .filter((solar) => {
       const year = solar.getYear();

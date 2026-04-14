@@ -125,6 +125,16 @@ export default function AddRecordPage() {
   const pillarMonth = `${monthStem}${monthBranch}`;
   const pillarDay = `${dayStem}${dayBranch}`;
   const pillarTime = `${timeStem}${timeBranch}`;
+  const isPillarInputComplete = Boolean(
+    yearStem &&
+      yearBranch &&
+      monthStem &&
+      monthBranch &&
+      dayStem &&
+      dayBranch &&
+      timeStem &&
+      timeBranch
+  );
   const yearBranchOptions = useMemo(
     () => (yearStem ? getValidDizhi(yearStem) : [...DI_ZHI_OPTIONS]),
     [yearStem]
@@ -229,6 +239,11 @@ export default function AddRecordPage() {
 
   const handleFindCandidateYears = useCallback(() => {
     setHasSearchedCandidates(true);
+    if (!isPillarInputComplete) {
+      setCandidateDateTimes([]);
+      setSearchHint("请先完整选择年、月、日、时四柱后再搜索匹配日期。");
+      return;
+    }
     const start = Number(searchStartYear);
     const end = Number(searchEndYear);
     if (Number.isNaN(start) || Number.isNaN(end)) {
@@ -251,7 +266,7 @@ export default function AddRecordPage() {
     );
     if (!candidates.length) {
       setCandidateDateTimes([]);
-      setSearchHint("该范围内未找到对应日期，请调整四柱或扩大年份范围。");
+      setSearchHint("未找到匹配日期，请检查干支组合是否正确。");
       return;
     }
     setCandidateDateTimes(candidates);
@@ -262,14 +277,19 @@ export default function AddRecordPage() {
     );
     setReferenceYear(`${candidates[0].year}`);
     setSearchHint(`已找到 ${candidates.length} 个候选日期，可直接选择。`);
-  }, [pillarYear, pillarMonth, pillarDay, pillarTime, searchStartYear, searchEndYear]);
+  }, [isPillarInputComplete, pillarYear, pillarMonth, pillarDay, pillarTime, searchStartYear, searchEndYear]);
 
   useEffect(() => {
     if (inputMode !== "pillars") {
       return;
     }
+    if (!isPillarInputComplete) {
+      setCandidateDateTimes([]);
+      setSearchHint("请先完整选择年、月、日、时四柱后再搜索匹配日期。");
+      return;
+    }
     handleFindCandidateYears();
-  }, [inputMode, handleFindCandidateYears]);
+  }, [inputMode, isPillarInputComplete, handleFindCandidateYears]);
 
   useEffect(() => {
     if (yearStem && yearBranch && !yearBranchOptions.includes(yearBranch as (typeof DI_ZHI_OPTIONS)[number])) {
