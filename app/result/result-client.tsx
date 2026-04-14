@@ -42,7 +42,13 @@ export default function ResultClient() {
       return null;
     }
     if (isPillarsMode(record.inputMode) && record.pillars) {
-      return getGanZhiFromPillars(record.pillars, record.gender, record.referenceSolarDateTime);
+      const fallbackReferenceDateTime =
+        record.birthDate && record.birthTime ? `${record.birthDate}T${record.birthTime}` : undefined;
+      return getGanZhiFromPillars(
+        record.pillars,
+        record.gender,
+        record.referenceSolarDateTime ?? fallbackReferenceDateTime
+      );
     }
     if (record.inputMode === "lunar") {
       return getGanZhiFromLunarBirthTime(record.birthDate, record.birthTime, record.gender);

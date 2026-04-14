@@ -208,13 +208,15 @@ export default function AddRecordPage() {
       setSaveMessage("四柱模式下请先完整选择年、月、日、时天干地支。");
       return;
     }
+    const pillarReferenceDateTime = normalizedReferenceDateTime;
+    const [pillarReferenceDate = "", pillarReferenceTime = ""] = pillarReferenceDateTime.split("T");
     setIsSaving(true);
     const nextRecord: BaziRecord = {
       id: `${Date.now()}`,
       name: name.trim(),
       gender,
-      birthDate: inputMode === "pillars" ? "" : birthDate,
-      birthTime: inputMode === "pillars" ? "" : birthTime,
+      birthDate: inputMode === "pillars" ? pillarReferenceDate : birthDate,
+      birthTime: inputMode === "pillars" ? pillarReferenceTime : birthTime,
       inputMode,
       pillars:
         inputMode === "pillars"
@@ -226,8 +228,8 @@ export default function AddRecordPage() {
             }
           : undefined,
       referenceSolarDateTime:
-        inputMode === "pillars" && normalizedReferenceDateTime
-          ? normalizedReferenceDateTime
+        inputMode === "pillars" && pillarReferenceDateTime
+          ? pillarReferenceDateTime
           : undefined,
       notes: notes.trim(),
       createdAt: new Date().toISOString().slice(0, 10)

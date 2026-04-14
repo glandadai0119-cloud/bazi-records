@@ -713,23 +713,14 @@ function createGanZhiResultFromSolar(
         shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, daYunGanZhi)
       };
     });
-  const currentYear = new Date().getFullYear();
-  const now = new Date();
-  const currentSolar = Solar.fromYmdHms(
-    now.getFullYear(),
-    now.getMonth() + 1,
-    now.getDate(),
-    now.getHours(),
-    now.getMinutes(),
-    now.getSeconds()
-  );
+  const baseYear = birthYear;
+  const baseSolar = Solar.fromYmdHms(baseYear, solar.getMonth(), solar.getDay(), solar.getHour(), solar.getMinute(), 0);
   const currentDaYun =
     daYun.find(
-      (item) => item.startYear <= currentYear && currentYear <= item.endYear
+      (item) => item.startYear <= baseYear && baseYear <= item.endYear
     ) ?? null;
   const liuNian = Array.from({ length: 7 }, (_, index) => {
-    const yearOffset = index - 3;
-    const targetYear = currentYear + yearOffset;
+    const targetYear = baseYear + index;
     const liuNianGanZhi = Solar.fromYmdHms(targetYear, 6, 1, 12, 0, 0)
       .getLunar()
       .getYearInGanZhiExact();
@@ -748,9 +739,7 @@ function createGanZhiResultFromSolar(
       shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, liuNianGanZhi)
     };
   });
-  const currentLiuNianDetail =
-    liuNian.find((item) => item.ganZhi === currentSolar.getLunar().getYearInGanZhiExact()) ??
-    null;
+  const currentLiuNianDetail = liuNian[0] ?? null;
 
   const result = directPillars
     ? {
@@ -788,7 +777,7 @@ function createGanZhiResultFromSolar(
     yunStartDesc: `起运：${yun.getStartSolar().toYmd()}（${yun.getStartYear()}年${yun.getStartMonth()}月${yun.getStartDay()}天）`,
     daYun,
     currentDaYun,
-    currentLiuNian: currentSolar.getLunar().getYearInGanZhiExact(),
+    currentLiuNian: baseSolar.getLunar().getYearInGanZhiExact(),
     liuNian,
     currentLiuNianDetail,
     patternAnalysis: {
