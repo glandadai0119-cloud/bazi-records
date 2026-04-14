@@ -201,7 +201,11 @@ export default function BaziResultPanel({
           </div>
         </div>
       ) : null}
-      {rightActions ? <div className="px-3 pb-3">{rightActions}</div> : null}
+      {rightActions ? (
+        <div data-html2canvas-ignore="true" className="px-3 pb-3">
+          {rightActions}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -52,7 +52,7 @@ export default function AddRecordPage() {
     setIsExporting(true);
     const html2canvas = (await import("html2canvas")).default;
     const canvas = await html2canvas(resultPosterRef.current, {
-      backgroundColor: "#ffffff",
+      backgroundColor: "#f8fafc",
       scale: 2
     });
     const url = canvas.toDataURL("image/png");
@@ -134,7 +134,7 @@ export default function AddRecordPage() {
           {ganZhi ? (
             <div
               ref={resultPosterRef}
-              className="space-y-3"
+              className="space-y-3 rounded-xl bg-slate-50 p-4"
             >
               <BaziResultPanel
                 ganZhi={ganZhi}

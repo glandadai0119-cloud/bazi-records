@@ -67,7 +67,7 @@ export default function ResultClient() {
     setIsExporting(true);
     const html2canvas = (await import("html2canvas")).default;
     const canvas = await html2canvas(posterRef.current, {
-      backgroundColor: "#ffffff",
+      backgroundColor: "#f8fafc",
       scale: 2
     });
     const url = canvas.toDataURL("image/png");
