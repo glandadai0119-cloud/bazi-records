@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getGanZhiFromBirthTime, getGanZhiFromPillars } from "@/lib/bazi";
+import {
+  getGanZhiFromBirthTime,
+  getGanZhiFromLunarBirthTime,
+  getGanZhiFromPillars
+} from "@/lib/bazi";
 import type { BaziRecord } from "@/data/mock-records";
 import { appendRecord } from "@/lib/records-storage";
 import BaziResultPanel from "@/components/bazi-result-panel";
@@ -13,7 +17,7 @@ export default function AddRecordPage() {
   const router = useRouter();
   const resultPosterRef = useRef<HTMLDivElement | null>(null);
   const [name, setName] = useState("");
-  const [inputMode, setInputMode] = useState<"date" | "ganzhi">("date");
+  const [inputMode, setInputMode] = useState<"solar" | "lunar" | "pillars">("solar");
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
   const [pillarYear, setPillarYear] = useState("甲子");
@@ -26,7 +30,7 @@ export default function AddRecordPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const ganZhi = useMemo(() => {
-    if (inputMode === "ganzhi") {
+    if (inputMode === "pillars") {
       return getGanZhiFromPillars(
         {
           year: pillarYear,
@@ -37,6 +41,9 @@ export default function AddRecordPage() {
         gender
       );
     }
+    if (inputMode === "lunar") {
+      return getGanZhiFromLunarBirthTime(birthDate, birthTime, gender);
+    }
     return getGanZhiFromBirthTime(birthDate, birthTime, gender);
   }, [inputMode, pillarYear, pillarMonth, pillarDay, pillarTime, birthDate, birthTime, gender]);
 
@@ -46,8 +53,8 @@ export default function AddRecordPage() {
       setSaveMessage("请先填写姓名。");
       return;
     }
-    if (inputMode === "date" && (!birthDate || !birthTime)) {
-      setSaveMessage("日期模式下请完整填写出生日期和出生时间。");
+    if (inputMode !== "pillars" && (!birthDate || !birthTime)) {
+      setSaveMessage("公历/农历模式下请完整填写出生日期和出生时间。");
       return;
     }
     setIsSaving(true);
@@ -55,11 +62,11 @@ export default function AddRecordPage() {
       id: `${Date.now()}`,
       name: name.trim(),
       gender,
-      birthDate: inputMode === "date" ? birthDate : "",
-      birthTime: inputMode === "date" ? birthTime : "",
+      birthDate: inputMode === "pillars" ? "" : birthDate,
+      birthTime: inputMode === "pillars" ? "" : birthTime,
       inputMode,
       pillars:
-        inputMode === "ganzhi"
+        inputMode === "pillars"
           ? {
               year: pillarYear,
               month: pillarMonth,
@@ -133,50 +140,72 @@ export default function AddRecordPage() {
             />
           </label>
 
-          <label className="grid gap-2 text-sm">
-            性别
-            <select
-              name="gender"
-              value={gender}
-              onChange={(event) => setGender(event.target.value as "男" | "女")}
-              className="rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-300 focus:ring"
-            >
-              <option value="男">男</option>
-              <option value="女">女</option>
-            </select>
-          </label>
+          <div className="grid gap-2 text-sm">
+            <span>性别</span>
+            <div className="inline-flex rounded-full border border-[#ddd3c5] bg-[#f8f4ed] p-1">
+              <button
+                type="button"
+                onClick={() => setGender("男")}
+                className={`rounded-full px-4 py-1.5 text-sm transition ${
+                  gender === "男" ? "bg-[#2f2a24] text-white" : "text-slate-600"
+                }`}
+              >
+                男
+              </button>
+              <button
+                type="button"
+                onClick={() => setGender("女")}
+                className={`rounded-full px-4 py-1.5 text-sm transition ${
+                  gender === "女" ? "bg-[#2f2a24] text-white" : "text-slate-600"
+                }`}
+              >
+                女
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
-          <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="rounded-full border border-[#ddd3c5] bg-[#f8f4ed] p-1">
+          <div className="grid grid-cols-3 gap-1 text-sm">
             <button
               type="button"
-              onClick={() => setInputMode("date")}
-              className={`rounded-md px-3 py-2 transition ${
-                inputMode === "date"
-                  ? "bg-slate-900 text-white"
-                  : "bg-white text-slate-600 hover:bg-slate-100"
+              onClick={() => setInputMode("solar")}
+              className={`rounded-full px-3 py-2 transition ${
+                inputMode === "solar"
+                  ? "bg-[#2f2a24] text-white"
+                  : "text-slate-600 hover:bg-white/60"
               }`}
             >
-              日期模式
+              公历
             </button>
             <button
               type="button"
-              onClick={() => setInputMode("ganzhi")}
-              className={`rounded-md px-3 py-2 transition ${
-                inputMode === "ganzhi"
-                  ? "bg-slate-900 text-white"
-                  : "bg-white text-slate-600 hover:bg-slate-100"
+              onClick={() => setInputMode("lunar")}
+              className={`rounded-full px-3 py-2 transition ${
+                inputMode === "lunar"
+                  ? "bg-[#2f2a24] text-white"
+                  : "text-slate-600 hover:bg-white/60"
               }`}
             >
-              干支模式
+              农历
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode("pillars")}
+              className={`rounded-full px-3 py-2 transition ${
+                inputMode === "pillars"
+                  ? "bg-[#2f2a24] text-white"
+                  : "text-slate-600 hover:bg-white/60"
+              }`}
+            >
+              四柱
             </button>
           </div>
         </div>
 
-        {inputMode === "date" ? (
+        {inputMode !== "pillars" ? (
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-sm">
-              出生日期
+              {inputMode === "lunar" ? "出生日期（农历）" : "出生日期（公历）"}
               <input
                 name="birthDate"
                 type="date"
@@ -198,13 +227,13 @@ export default function AddRecordPage() {
             </label>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <label className="grid gap-2 text-sm">
               年柱
               <select
                 value={pillarYear}
                 onChange={(event) => setPillarYear(event.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-3 text-base outline-none ring-slate-300 focus:ring"
+                className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
               >
                 {JIA_ZI_OPTIONS.map((option) => (
                   <option key={`year-${option}`} value={option}>
@@ -218,7 +247,7 @@ export default function AddRecordPage() {
               <select
                 value={pillarMonth}
                 onChange={(event) => setPillarMonth(event.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-3 text-base outline-none ring-slate-300 focus:ring"
+                className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
               >
                 {JIA_ZI_OPTIONS.map((option) => (
                   <option key={`month-${option}`} value={option}>
@@ -232,7 +261,7 @@ export default function AddRecordPage() {
               <select
                 value={pillarDay}
                 onChange={(event) => setPillarDay(event.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-3 text-base outline-none ring-slate-300 focus:ring"
+                className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
               >
                 {JIA_ZI_OPTIONS.map((option) => (
                   <option key={`day-${option}`} value={option}>
@@ -246,7 +275,7 @@ export default function AddRecordPage() {
               <select
                 value={pillarTime}
                 onChange={(event) => setPillarTime(event.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-3 text-base outline-none ring-slate-300 focus:ring"
+                className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
               >
                 {JIA_ZI_OPTIONS.map((option) => (
                   <option key={`time-${option}`} value={option}>
@@ -270,13 +299,13 @@ export default function AddRecordPage() {
                   name: name.trim(),
                   gender,
                   birthDate:
-                    inputMode === "date"
+                    inputMode !== "pillars"
                       ? birthDate
                       : `${pillarYear}年 ${pillarMonth}月 ${pillarDay}日 ${pillarTime}时`,
-                  birthTime: inputMode === "date" ? birthTime : "干支录入"
+                  birthTime: inputMode === "pillars" ? "四柱录入" : birthTime
                 }}
                 noteStorageKey={`draft_${name.trim() || "guest"}_${inputMode}_${
-                  inputMode === "date"
+                  inputMode !== "pillars"
                     ? `${birthDate}_${birthTime}`
                     : `${pillarYear}_${pillarMonth}_${pillarDay}_${pillarTime}`
                 }`}
@@ -293,7 +322,7 @@ export default function AddRecordPage() {
               />
             </div>
           ) : (
-            <p>请选择出生日期和时间后自动计算天干地支。</p>
+            <p>{inputMode === "pillars" ? "请选择四柱干支后开始排盘。" : "请选择出生日期和时间后自动计算天干地支。"}</p>
           )}
         </div>
 
@@ -318,7 +347,7 @@ export default function AddRecordPage() {
           disabled={isSaving}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isSaving ? "保存中..." : "保存记录"}
+          {isSaving ? "排盘中..." : "开始排盘"}
         </button>
         <button
           type="button"

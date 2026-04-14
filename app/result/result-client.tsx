@@ -5,7 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BaziRecord } from "@/data/mock-records";
 import { mockRecords } from "@/data/mock-records";
-import { getGanZhiFromBirthTime, getGanZhiFromPillars } from "@/lib/bazi";
+import {
+  getGanZhiFromBirthTime,
+  getGanZhiFromLunarBirthTime,
+  getGanZhiFromPillars
+} from "@/lib/bazi";
 import { getStoredRecordById, removeStoredRecordById } from "@/lib/records-storage";
 import BaziResultPanel from "@/components/bazi-result-panel";
 
@@ -16,6 +20,8 @@ export default function ResultClient() {
   const recordId = searchParams.get("id") ?? "";
   const [record, setRecord] = useState<BaziRecord | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const isPillarsMode = (mode: BaziRecord["inputMode"]): boolean =>
+    mode === "pillars" || mode === "ganzhi";
 
   useEffect(() => {
     if (typeof window === "undefined" || !recordId) {
@@ -35,8 +41,11 @@ export default function ResultClient() {
     if (!record) {
       return null;
     }
-    if (record.inputMode === "ganzhi" && record.pillars) {
+    if (isPillarsMode(record.inputMode) && record.pillars) {
       return getGanZhiFromPillars(record.pillars, record.gender);
+    }
+    if (record.inputMode === "lunar") {
+      return getGanZhiFromLunarBirthTime(record.birthDate, record.birthTime, record.gender);
     }
     return getGanZhiFromBirthTime(record.birthDate, record.birthTime, record.gender);
   }, [record]);
@@ -130,8 +139,8 @@ export default function ResultClient() {
         </div>
         <p className="text-sm text-slate-600">
           出生时间：
-          {record.inputMode === "ganzhi" && record.pillars
-            ? ` ${record.pillars.year}年 ${record.pillars.month}月 ${record.pillars.day}日 ${record.pillars.time}时（干支录入）`
+          {isPillarsMode(record.inputMode) && record.pillars
+            ? ` ${record.pillars.year}年 ${record.pillars.month}月 ${record.pillars.day}日 ${record.pillars.time}时（四柱录入）`
             : ` ${record.birthDate} ${record.birthTime}`}
         </p>
         {record.notes ? <p className="text-sm text-slate-700">备注：{record.notes}</p> : null}
@@ -146,10 +155,10 @@ export default function ResultClient() {
               name: record.name,
               gender: record.gender,
               birthDate:
-                record.inputMode === "ganzhi" && record.pillars
+                isPillarsMode(record.inputMode) && record.pillars
                   ? `${record.pillars.year}年 ${record.pillars.month}月 ${record.pillars.day}日 ${record.pillars.time}时`
                   : record.birthDate,
-              birthTime: record.inputMode === "ganzhi" ? "干支录入" : record.birthTime,
+              birthTime: isPillarsMode(record.inputMode) ? "四柱录入" : record.birthTime,
               createdAt: record.createdAt
             }}
             noteStorageKey={record.id}

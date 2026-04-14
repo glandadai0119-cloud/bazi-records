@@ -25,6 +25,9 @@ export function getStoredRecords(): BaziRecord[] {
       const record = item as Record<string, unknown>;
       const isValidInputMode =
         record.inputMode === undefined ||
+        record.inputMode === "solar" ||
+        record.inputMode === "lunar" ||
+        record.inputMode === "pillars" ||
         record.inputMode === "date" ||
         record.inputMode === "ganzhi";
       const pillars = record.pillars as Record<string, unknown> | undefined;

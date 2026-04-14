@@ -4,7 +4,7 @@ export type BaziRecord = {
   gender: "男" | "女";
   birthDate: string;
   birthTime: string;
-  inputMode?: "date" | "ganzhi";
+  inputMode?: "solar" | "lunar" | "pillars" | "date" | "ganzhi";
   pillars?: {
     year: string;
     month: string;

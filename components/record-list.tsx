@@ -10,6 +10,8 @@ type RecordListProps = {
 
 export default function RecordList({ records, onDelete }: RecordListProps) {
   const router = useRouter();
+  const isPillarsMode = (mode: BaziRecord["inputMode"]): boolean =>
+    mode === "pillars" || mode === "ganzhi";
 
   if (records.length === 0) {
     return (
@@ -51,8 +53,8 @@ export default function RecordList({ records, onDelete }: RecordListProps) {
           </div>
           <p className="text-sm text-slate-600">
             出生时间：
-            {record.inputMode === "ganzhi" && record.pillars
-              ? ` ${record.pillars.year}年 ${record.pillars.month}月 ${record.pillars.day}日 ${record.pillars.time}时（干支录入）`
+            {isPillarsMode(record.inputMode) && record.pillars
+              ? ` ${record.pillars.year}年 ${record.pillars.month}月 ${record.pillars.day}日 ${record.pillars.time}时（四柱录入）`
               : ` ${record.birthDate} ${record.birthTime}`}
           </p>
           <p className="mt-2 text-sm text-slate-700">{record.notes}</p>

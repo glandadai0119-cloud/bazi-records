@@ -1,4 +1,4 @@
-import { Solar } from "lunar-javascript";
+import { Lunar, Solar } from "lunar-javascript";
 
 type WuXing = "wood" | "fire" | "earth" | "metal" | "water";
 
@@ -560,6 +560,29 @@ export function getGanZhiFromBirthTime(
   return createGanZhiResultFromSolar(solar, year, gender);
 }
 
+export function getGanZhiFromLunarBirthTime(
+  birthDate: string,
+  birthTime: string,
+  gender: "男" | "女"
+): GanZhiResult | null {
+  if (!birthDate || !birthTime) {
+    return null;
+  }
+
+  const [year, month, day] = birthDate.split("-").map(Number);
+  const [hour, minute] = birthTime.split(":").map(Number);
+
+  if (
+    [year, month, day, hour, minute].some((value) => Number.isNaN(value))
+  ) {
+    return null;
+  }
+
+  const lunar = Lunar.fromYmdHms(year, month, day, hour, minute, 0);
+  const solar = lunar.getSolar();
+  return createGanZhiResultFromSolar(solar, year, gender);
+}
+
 export function getGanZhiFromPillars(
   pillars: PillarInput,
   gender: "男" | "女"
@@ -579,13 +602,14 @@ export function getGanZhiFromPillars(
     return null;
   }
   const solar = solarList[0];
-  return createGanZhiResultFromSolar(solar, solar.getYear(), gender);
+  return createGanZhiResultFromSolar(solar, solar.getYear(), gender, pillars);
 }
 
 function createGanZhiResultFromSolar(
   solar: Solar,
   birthYear: number,
-  gender: "男" | "女"
+  gender: "男" | "女",
+  directPillars?: PillarInput
 ): GanZhiResult {
   const eightChar = solar.getLunar().getEightChar();
   const dayGan = eightChar.getDayGan();
@@ -661,12 +685,19 @@ function createGanZhiResultFromSolar(
     liuNian.find((item) => item.ganZhi === currentSolar.getLunar().getYearInGanZhiExact()) ??
     null;
 
-  const result = {
-    year: eightChar.getYear(),
-    month: eightChar.getMonth(),
-    day: eightChar.getDay(),
-    time: eightChar.getTime()
-  };
+  const result = directPillars
+    ? {
+        year: directPillars.year,
+        month: directPillars.month,
+        day: directPillars.day,
+        time: directPillars.time
+      }
+    : {
+        year: eightChar.getYear(),
+        month: eightChar.getMonth(),
+        day: eightChar.getDay(),
+        time: eightChar.getTime()
+      };
 
   return {
     ...result,
