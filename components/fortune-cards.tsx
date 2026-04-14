@@ -41,6 +41,11 @@ export default function FortuneCards({ ganZhi }: FortuneCardsProps) {
   return (
     <div className="space-y-2 rounded-md border border-[#c8ad8f] bg-[#f8f4ef] p-3 text-xs text-slate-700">
       <PatternAnalysis ganZhi={ganZhi} />
+      <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+        <p className="text-xs tracking-[0.2em] text-slate-500">性格画像</p>
+        <p className="mt-1 text-sm leading-6 text-slate-700">{ganZhi.personalityProfile.dayMasterSummary}</p>
+        <p className="mt-1 text-sm leading-6 text-slate-700">{ganZhi.personalityProfile.patternSummary}</p>
+      </div>
       <p className="font-semibold tracking-[0.2em] text-[#6a4729]">大运</p>
       <p>{ganZhi.yunStartDesc}</p>
       <div className="flex items-center gap-2">

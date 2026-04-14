@@ -55,6 +55,10 @@ export type GanZhiResult = {
     favorableElements: string[];
     summary: string;
   };
+  personalityProfile: {
+    dayMasterSummary: string;
+    patternSummary: string;
+  };
   pillarShenSha: {
     year: string[];
     month: string[];
@@ -385,6 +389,39 @@ function getPatternSummary(
   return `此命造为${patternName}，日主中和，格局较稳，五行流转有序，主进退有度。`;
 }
 
+function getDayMasterPersonalitySummary(dayGan: string): string {
+  const summaryMap: Record<string, string> = {
+    甲: "你做事坦率有原则，重视责任感，遇到问题更愿意正面解决，给人可靠的印象。",
+    乙: "你待人细腻有同理心，善于协调关系，做事灵活且有韧性，常能在细节中见长。",
+    丙: "你表达热情直爽，行动力强，容易带动氛围，遇到机会时往往敢于先迈出一步。",
+    丁: "你气质温和有分寸，外在沉稳、内在有追求，做事讲究品质与节奏。",
+    戊: "你务实稳重，重承诺、讲担当，面对压力时能保持定力，适合长期布局。",
+    己: "你思路周全、重视安全感，擅长把复杂问题拆解成可执行步骤，做事踏实。",
+    庚: "你判断干脆，执行果断，重效率与边界感，适合在关键时刻做决策。",
+    辛: "你审美与标准感较强，做事讲究精度，善于打磨细节，常以质量取胜。",
+    壬: "你视野开阔、适应力强，善于整合资源，面对变化时通常能快速调整方向。",
+    癸: "你观察敏锐、思维细致，擅长洞察情绪和趋势，做事更偏智慧型推进。"
+  };
+  return summaryMap[dayGan] ?? "你整体气质稳中有进，具备持续成长与自我调整的能力。";
+}
+
+function getPatternPersonalitySummary(patternName: string): string {
+  const map: Record<string, string> = {
+    正官格: "你的行为风格偏向规范与自律，重视秩序和公信力，适合承担管理与统筹角色。",
+    七杀格: "你做事果敢、有冲劲，遇到挑战时反而更能激发潜力，适合在压力场景中突破。",
+    正财格: "你重视稳定积累与实际回报，理财和资源配置意识较好，适合稳步经营型路径。",
+    偏财格: "你对机会敏感，行动灵活，善于连接资源与人脉，适合市场化与开拓型方向。",
+    食神格: "你表达自然温和，具备创造力和亲和力，适合内容、策划、教育等输出型工作。",
+    伤官格: "你思维活跃、观点鲜明，善于打破惯性并提出新解法，适合创新和优化场景。",
+    正印格: "你学习力和吸收力较强，重视内在成长，适合需要深度思考与专业沉淀的路线。",
+    偏印格: "你理解力独到，擅长从不同角度看问题，适合研究、策略与创意型方向。",
+    建禄格: "你自驱力强、执行稳健，做事有持续性，适合长期项目与主导性岗位。",
+    劫财格: "你行动积极，合作与竞争意识并存，适合团队协作和需要快速推进的环境。",
+    平常格: "你的风格更均衡，兼顾稳健与灵活，适合在多元角色中持续积累优势。"
+  };
+  return map[patternName] ?? "你的行为风格整体平衡，既有执行力也有适应力，适合长期成长型路径。";
+}
+
 /**
  * 根据日干和地支，输出地支藏干对应的十神信息。
  */
@@ -624,6 +661,10 @@ export function getGanZhiFromBirthTime(
       dayMasterStrength,
       favorableElements,
       summary: getPatternSummary(patternName, dayMasterStrength)
+    },
+    personalityProfile: {
+      dayMasterSummary: getDayMasterPersonalitySummary(dayGan),
+      patternSummary: getPatternPersonalitySummary(patternName)
     },
     pillarShenSha: {
       year: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, eightChar.getYear()),
