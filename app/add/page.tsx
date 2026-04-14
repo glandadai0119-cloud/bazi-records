@@ -95,14 +95,14 @@ export default function AddRecordPage() {
   const [inputMode, setInputMode] = useState<"solar" | "lunar" | "pillars">("solar");
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
-  const [yearStem, setYearStem] = useState("甲");
-  const [yearBranch, setYearBranch] = useState("子");
-  const [monthStem, setMonthStem] = useState("丙");
-  const [monthBranch, setMonthBranch] = useState("寅");
-  const [dayStem, setDayStem] = useState("甲");
-  const [dayBranch, setDayBranch] = useState("子");
-  const [timeStem, setTimeStem] = useState("甲");
-  const [timeBranch, setTimeBranch] = useState("子");
+  const [yearStem, setYearStem] = useState("");
+  const [yearBranch, setYearBranch] = useState("");
+  const [monthStem, setMonthStem] = useState("");
+  const [monthBranch, setMonthBranch] = useState("");
+  const [dayStem, setDayStem] = useState("");
+  const [dayBranch, setDayBranch] = useState("");
+  const [timeStem, setTimeStem] = useState("");
+  const [timeBranch, setTimeBranch] = useState("");
   const [referenceSolarDateTime, setReferenceSolarDateTime] = useState("");
   const [referenceYear, setReferenceYear] = useState(`${new Date().getFullYear()}`);
   const [searchStartYear, setSearchStartYear] = useState("1900");
@@ -125,30 +125,26 @@ export default function AddRecordPage() {
   const pillarMonth = `${monthStem}${monthBranch}`;
   const pillarDay = `${dayStem}${dayBranch}`;
   const pillarTime = `${timeStem}${timeBranch}`;
-  const yearBranchOptions = getValidDizhi(yearStem);
-  const yearStemOptions = TIAN_GAN_OPTIONS.filter((stem) => isValidGanzhi(stem, yearBranch));
-  const monthBranchOptions = getValidDizhi(monthStem);
-  const monthStemBaseOptions = TIAN_GAN_OPTIONS.filter((stem) => isValidGanzhi(stem, monthBranch));
+  const yearBranchOptions = useMemo(
+    () => (yearStem ? getValidDizhi(yearStem) : [...DI_ZHI_OPTIONS]),
+    [yearStem]
+  );
+  const monthBranchOptions = useMemo(
+    () => (monthStem ? getValidDizhi(monthStem) : [...DI_ZHI_OPTIONS]),
+    [monthStem]
+  );
   const expectedMonthStem = getExpectedMonthStem(yearStem, monthBranch);
-  const monthStemOptions = useMemo(
-    () =>
-      expectedMonthStem && monthStemBaseOptions.includes(expectedMonthStem)
-        ? [expectedMonthStem]
-        : monthStemBaseOptions,
-    [expectedMonthStem, monthStemBaseOptions]
+  const monthStemOptions = useMemo(() => [...TIAN_GAN_OPTIONS], []);
+  const dayBranchOptions = useMemo(
+    () => (dayStem ? getValidDizhi(dayStem) : [...DI_ZHI_OPTIONS]),
+    [dayStem]
   );
-  const dayBranchOptions = getValidDizhi(dayStem);
-  const dayStemOptions = TIAN_GAN_OPTIONS.filter((stem) => isValidGanzhi(stem, dayBranch));
-  const timeBranchOptions = getValidDizhi(timeStem);
-  const timeStemBaseOptions = TIAN_GAN_OPTIONS.filter((stem) => isValidGanzhi(stem, timeBranch));
+  const timeBranchOptions = useMemo(
+    () => (timeStem ? getValidDizhi(timeStem) : [...DI_ZHI_OPTIONS]),
+    [timeStem]
+  );
   const expectedTimeStem = getExpectedTimeStem(dayStem, timeBranch);
-  const timeStemOptions = useMemo(
-    () =>
-      expectedTimeStem && timeStemBaseOptions.includes(expectedTimeStem)
-        ? [expectedTimeStem]
-        : timeStemBaseOptions,
-    [expectedTimeStem, timeStemBaseOptions]
-  );
+  const timeStemOptions = useMemo(() => [...TIAN_GAN_OPTIONS], []);
   const orderedMonthStemOptions = useMemo(
     () => prioritizeRecommended(monthStemOptions, expectedMonthStem),
     [monthStemOptions, expectedMonthStem]
@@ -157,8 +153,8 @@ export default function AddRecordPage() {
     () => prioritizeRecommended(timeStemOptions, expectedTimeStem),
     [timeStemOptions, expectedTimeStem]
   );
-  const isMonthStemLocked = Boolean(expectedMonthStem);
-  const isTimeStemLocked = Boolean(expectedTimeStem);
+  const isMonthStemRecommended = Boolean(expectedMonthStem) && monthStem === expectedMonthStem;
+  const isTimeStemRecommended = Boolean(expectedTimeStem) && timeStem === expectedTimeStem;
   const ganZhi = useMemo(() => {
     if (inputMode === "pillars") {
       return getGanZhiFromPillars(
@@ -196,6 +192,10 @@ export default function AddRecordPage() {
     }
     if (inputMode !== "pillars" && (!birthDate || !birthTime)) {
       setSaveMessage("公历/农历模式下请完整填写出生日期和出生时间。");
+      return;
+    }
+    if (inputMode === "pillars" && (!pillarYear || !pillarMonth || !pillarDay || !pillarTime)) {
+      setSaveMessage("四柱模式下请先完整选择年、月、日、时天干地支。");
       return;
     }
     setIsSaving(true);
@@ -272,52 +272,28 @@ export default function AddRecordPage() {
   }, [inputMode, handleFindCandidateYears]);
 
   useEffect(() => {
-    if (!yearBranchOptions.includes(yearBranch as (typeof DI_ZHI_OPTIONS)[number])) {
+    if (yearStem && yearBranch && !yearBranchOptions.includes(yearBranch as (typeof DI_ZHI_OPTIONS)[number])) {
       const fallback = yearBranchOptions[0];
       setYearBranch(fallback);
-      setPillarWarning(`年柱组合不合法，已自动修正为 ${yearStem}${fallback}。`);
+      setPillarWarning(`年柱地支与天干阴阳不符，已自动修正为 ${yearStem}${fallback}。`);
     }
   }, [yearStem, yearBranch, yearBranchOptions]);
 
   useEffect(() => {
-    if (!yearStemOptions.includes(yearStem as (typeof TIAN_GAN_OPTIONS)[number])) {
-      const fallback = yearStemOptions[0];
-      setYearStem(fallback);
-      setPillarWarning(`年柱组合不合法，已自动修正为 ${fallback}${yearBranch}。`);
-    }
-  }, [yearBranch, yearStem, yearStemOptions]);
-
-  useEffect(() => {
-    if (!dayBranchOptions.includes(dayBranch as (typeof DI_ZHI_OPTIONS)[number])) {
+    if (dayStem && dayBranch && !dayBranchOptions.includes(dayBranch as (typeof DI_ZHI_OPTIONS)[number])) {
       const fallback = dayBranchOptions[0];
       setDayBranch(fallback);
-      setPillarWarning(`日柱组合不合法，已自动修正为 ${dayStem}${fallback}。`);
+      setPillarWarning(`日柱地支与天干阴阳不符，已自动修正为 ${dayStem}${fallback}。`);
     }
   }, [dayStem, dayBranch, dayBranchOptions]);
 
   useEffect(() => {
-    if (!dayStemOptions.includes(dayStem as (typeof TIAN_GAN_OPTIONS)[number])) {
-      const fallback = dayStemOptions[0];
-      setDayStem(fallback);
-      setPillarWarning(`日柱组合不合法，已自动修正为 ${fallback}${dayBranch}。`);
-    }
-  }, [dayBranch, dayStem, dayStemOptions]);
-
-  useEffect(() => {
-    if (!monthBranchOptions.includes(monthBranch as (typeof DI_ZHI_OPTIONS)[number])) {
+    if (monthStem && monthBranch && !monthBranchOptions.includes(monthBranch as (typeof DI_ZHI_OPTIONS)[number])) {
       const fallback = monthBranchOptions[0];
       setMonthBranch(fallback);
-      setPillarWarning(`月柱地支不合法，已自动修正为 ${monthStem}${fallback}。`);
+      setPillarWarning(`月柱地支与天干阴阳不符，已自动修正为 ${monthStem}${fallback}。`);
     }
   }, [monthStem, monthBranch, monthBranchOptions]);
-
-  useEffect(() => {
-    if (!monthStemOptions.includes(monthStem as (typeof TIAN_GAN_OPTIONS)[number])) {
-      const fallback = monthStemOptions[0];
-      setMonthStem(fallback);
-      setPillarWarning(`月柱已按五虎遁规则自动修正为 ${fallback}${monthBranch}。`);
-    }
-  }, [monthStem, monthBranch, monthStemOptions]);
 
   useEffect(() => {
     if (expectedMonthStem && monthStemOptions.includes(expectedMonthStem)) {
@@ -327,20 +303,12 @@ export default function AddRecordPage() {
   }, [expectedMonthStem, yearStem, monthBranch, monthStemOptions]);
 
   useEffect(() => {
-    if (!timeBranchOptions.includes(timeBranch as (typeof DI_ZHI_OPTIONS)[number])) {
+    if (timeStem && timeBranch && !timeBranchOptions.includes(timeBranch as (typeof DI_ZHI_OPTIONS)[number])) {
       const fallback = timeBranchOptions[0];
       setTimeBranch(fallback);
-      setPillarWarning(`时柱地支不合法，已自动修正为 ${timeStem}${fallback}。`);
+      setPillarWarning(`时柱地支与天干阴阳不符，已自动修正为 ${timeStem}${fallback}。`);
     }
   }, [timeStem, timeBranch, timeBranchOptions]);
-
-  useEffect(() => {
-    if (!timeStemOptions.includes(timeStem as (typeof TIAN_GAN_OPTIONS)[number])) {
-      const fallback = timeStemOptions[0];
-      setTimeStem(fallback);
-      setPillarWarning(`时柱已按五鼠遁规则自动修正为 ${fallback}${timeBranch}。`);
-    }
-  }, [timeStem, timeBranch, timeStemOptions]);
 
   useEffect(() => {
     if (expectedTimeStem && timeStemOptions.includes(expectedTimeStem)) {
@@ -520,7 +488,8 @@ export default function AddRecordPage() {
                     onChange={(event) => setYearStem(event.target.value)}
                     className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
                   >
-                    {yearStemOptions.map((option) => (
+                    <option value="">-</option>
+                    {TIAN_GAN_OPTIONS.map((option) => (
                       <option key={`year-stem-${option}`} value={option}>
                         {option}
                       </option>
@@ -531,6 +500,7 @@ export default function AddRecordPage() {
                     onChange={(event) => setYearBranch(event.target.value)}
                     className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
                   >
+                    <option value="">-</option>
                     {yearBranchOptions.map((option) => (
                       <option key={`year-branch-${option}`} value={option}>
                         {option}
@@ -544,7 +514,7 @@ export default function AddRecordPage() {
                   月柱
                   {expectedMonthStem ? (
                     <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700">
-                      {isMonthStemLocked ? "规" : "推荐"}
+                      推荐
                     </span>
                   ) : null}
                 </span>
@@ -552,13 +522,13 @@ export default function AddRecordPage() {
                   <select
                     value={monthStem}
                     onChange={(event) => setMonthStem(event.target.value)}
-                    disabled={isMonthStemLocked}
                     className={`w-full min-w-0 rounded-lg border px-2 py-2 text-sm outline-none ring-slate-300 focus:ring ${
-                      isMonthStemLocked
-                        ? "cursor-not-allowed border-blue-200 bg-blue-50 text-blue-700"
+                      isMonthStemRecommended
+                        ? "border-blue-400 bg-blue-50 text-blue-700"
                         : "border-slate-300"
                     }`}
                   >
+                    <option value="">-</option>
                     {orderedMonthStemOptions.map((option) => (
                       <option key={`month-stem-${option}`} value={option}>
                         {option}
@@ -571,6 +541,7 @@ export default function AddRecordPage() {
                     onChange={(event) => setMonthBranch(event.target.value)}
                     className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
                   >
+                    <option value="">-</option>
                     {monthBranchOptions.map((option) => (
                       <option key={`month-branch-${option}`} value={option}>
                         {option}
@@ -587,7 +558,8 @@ export default function AddRecordPage() {
                     onChange={(event) => setDayStem(event.target.value)}
                     className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
                   >
-                    {dayStemOptions.map((option) => (
+                    <option value="">-</option>
+                    {TIAN_GAN_OPTIONS.map((option) => (
                       <option key={`day-stem-${option}`} value={option}>
                         {option}
                       </option>
@@ -598,6 +570,7 @@ export default function AddRecordPage() {
                     onChange={(event) => setDayBranch(event.target.value)}
                     className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
                   >
+                    <option value="">-</option>
                     {dayBranchOptions.map((option) => (
                       <option key={`day-branch-${option}`} value={option}>
                         {option}
@@ -611,7 +584,7 @@ export default function AddRecordPage() {
                   时柱
                   {expectedTimeStem ? (
                     <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700">
-                      {isTimeStemLocked ? "规" : "推荐"}
+                      推荐
                     </span>
                   ) : null}
                 </span>
@@ -619,13 +592,13 @@ export default function AddRecordPage() {
                   <select
                     value={timeStem}
                     onChange={(event) => setTimeStem(event.target.value)}
-                    disabled={isTimeStemLocked}
                     className={`w-full min-w-0 rounded-lg border px-2 py-2 text-sm outline-none ring-slate-300 focus:ring ${
-                      isTimeStemLocked
-                        ? "cursor-not-allowed border-blue-200 bg-blue-50 text-blue-700"
+                      isTimeStemRecommended
+                        ? "border-blue-400 bg-blue-50 text-blue-700"
                         : "border-slate-300"
                     }`}
                   >
+                    <option value="">-</option>
                     {orderedTimeStemOptions.map((option) => (
                       <option key={`time-stem-${option}`} value={option}>
                         {option}
@@ -638,6 +611,7 @@ export default function AddRecordPage() {
                     onChange={(event) => setTimeBranch(event.target.value)}
                     className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-slate-300 focus:ring"
                   >
+                    <option value="">-</option>
                     {timeBranchOptions.map((option) => (
                       <option key={`time-branch-${option}`} value={option}>
                         {option}
