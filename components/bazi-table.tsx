@@ -121,12 +121,16 @@ export default function BaziTable({ ganZhi }: BaziTableProps) {
                     className="rounded-md border border-zinc-200 bg-zinc-50 p-2 text-center"
                   >
                     <p className="text-[11px] text-zinc-500">{column.label}</p>
-                    <p className={`text-2xl font-semibold leading-none ${getStemColorClass(stem)}`}>
-                      {stem || "--"}
-                    </p>
-                    <p className={`mt-1 text-2xl font-semibold leading-none ${getBranchColorClass(branch)}`}>
-                      {branch || "--"}
-                    </p>
+                    <div className="mt-1 flex h-9 items-center justify-center">
+                      <p className={`text-[26px] font-semibold leading-none ${getStemColorClass(stem)}`}>
+                        {stem || "--"}
+                      </p>
+                    </div>
+                    <div className="mt-1 flex h-9 items-center justify-center">
+                      <p className={`text-[26px] font-semibold leading-none ${getBranchColorClass(branch)}`}>
+                        {branch || "--"}
+                      </p>
+                    </div>
                     {!!shenShaTags.length && (
                       <div className="mt-1 flex flex-wrap items-center justify-center gap-1">
                         {shenShaTags.slice(0, 2).map((tag) => (
@@ -166,7 +170,7 @@ export default function BaziTable({ ganZhi }: BaziTableProps) {
             return (
               <div
                 key={`stem-${column.value}-${index}`}
-                className="border-b border-r border-zinc-200 py-2 text-4xl font-semibold leading-none last:border-r-0"
+                className="flex h-14 items-center justify-center border-b border-r border-zinc-200 px-1 py-1 text-[34px] font-semibold leading-none last:border-r-0"
               >
                 <span className={getStemColorClass(stem)}>{stem || "--"}</span>
               </div>
@@ -178,7 +182,7 @@ export default function BaziTable({ ganZhi }: BaziTableProps) {
             return (
               <div
                 key={`branch-${column.value}-${index}`}
-                className="border-b border-r border-zinc-200 py-2 text-4xl font-semibold leading-none last:border-r-0"
+                className="flex h-14 items-center justify-center border-b border-r border-zinc-200 px-1 py-1 text-[34px] font-semibold leading-none last:border-r-0"
               >
                 <span className={getBranchColorClass(branch)}>{branch || "--"}</span>
               </div>

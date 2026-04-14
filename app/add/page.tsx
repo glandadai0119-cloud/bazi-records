@@ -53,7 +53,7 @@ export default function AddRecordPage() {
     const html2canvas = (await import("html2canvas")).default;
     const canvas = await html2canvas(resultPosterRef.current, {
       backgroundColor: "#f8fafc",
-      scale: 2,
+      scale: 3,
       ignoreElements: (element) =>
         element.getAttribute("data-html2canvas-ignore") === "true" ||
         element.getAttribute("data-export-controls") === "true",
