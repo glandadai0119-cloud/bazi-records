@@ -2,24 +2,33 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { BaziRecord } from "@/data/mock-records";
+import { mockRecords } from "@/data/mock-records";
 import { getGanZhiFromBirthTime } from "@/lib/bazi";
 import { getStoredRecordById, removeStoredRecordById } from "@/lib/records-storage";
 import BaziResultPanel from "@/components/bazi-result-panel";
 
 export default function ResultClient() {
   const router = useRouter();
+  const posterRef = useRef<HTMLDivElement | null>(null);
   const searchParams = useSearchParams();
   const recordId = searchParams.get("id") ?? "";
   const [record, setRecord] = useState<BaziRecord | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined" || !recordId) {
       setRecord(null);
       return;
     }
-    setRecord(getStoredRecordById(recordId));
+    const stored = getStoredRecordById(recordId);
+    if (stored) {
+      setRecord(stored);
+      return;
+    }
+    // 兼容初始示例数据尚未写入 localStorage 的场景
+    setRecord(mockRecords.find((item) => item.id === recordId) ?? null);
   }, [recordId]);
 
   const ganZhi = useMemo(() => {
@@ -50,6 +59,25 @@ export default function ResultClient() {
       </section>
     );
   }
+
+  const handleExportPoster = async () => {
+    if (!posterRef.current || !ganZhi) {
+      return;
+    }
+    setIsExporting(true);
+    const html2canvas = (await import("html2canvas")).default;
+    const canvas = await html2canvas(posterRef.current, {
+      backgroundColor: "#ffffff",
+      scale: 2
+    });
+    const url = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    const safeName = record.name.trim() || "八字";
+    link.href = url;
+    link.download = `${safeName}-排盘海报.png`;
+    link.click();
+    setIsExporting(false);
+  };
 
   return (
     <section className="space-y-6">
@@ -94,8 +122,28 @@ export default function ResultClient() {
       </article>
 
       {ganZhi ? (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          <BaziResultPanel ganZhi={ganZhi} />
+        <div ref={posterRef} className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+          <BaziResultPanel
+            ganZhi={ganZhi}
+            basicInfo={{
+              name: record.name,
+              gender: record.gender,
+              birthDate: record.birthDate,
+              birthTime: record.birthTime,
+              createdAt: record.createdAt
+            }}
+            noteStorageKey={record.id}
+            rightActions={
+              <button
+                type="button"
+                onClick={handleExportPoster}
+                disabled={isExporting}
+                className="w-full rounded-md border border-[#c8ad8f] bg-[#fdf7ef] px-3 py-2 text-sm text-[#6a4729] transition hover:bg-[#f7efe4] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isExporting ? "正在生成海报..." : "导出图片海报"}
+              </button>
+            }
+          />
         </div>
       ) : (
         <section className="rounded-xl bg-white p-6 text-slate-600 shadow-sm">

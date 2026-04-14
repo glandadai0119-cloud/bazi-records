@@ -138,6 +138,13 @@ export default function AddRecordPage() {
             >
               <BaziResultPanel
                 ganZhi={ganZhi}
+                basicInfo={{
+                  name: name.trim(),
+                  gender,
+                  birthDate,
+                  birthTime
+                }}
+                noteStorageKey={`draft_${name.trim() || "guest"}_${birthDate}_${birthTime}`}
                 rightActions={
                   <button
                     type="button"
