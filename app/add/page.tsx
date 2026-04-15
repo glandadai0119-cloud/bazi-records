@@ -103,24 +103,21 @@ export default function AddRecordPage() {
   const [dayBranch, setDayBranch] = useState("");
   const [timeStem, setTimeStem] = useState("");
   const [timeBranch, setTimeBranch] = useState("");
-  const [referenceSolarDateTime, setReferenceSolarDateTime] = useState("");
+  const [selectedCandidateDate, setSelectedCandidateDate] = useState("");
   const [referenceYear, setReferenceYear] = useState(`${new Date().getFullYear()}`);
   const [searchStartYear, setSearchStartYear] = useState("1900");
   const [searchEndYear, setSearchEndYear] = useState("2030");
-  const [candidateDateTimes, setCandidateDateTimes] = useState<PillarSolarCandidate[]>([]);
+  const [candidateDates, setCandidateDates] = useState<PillarSolarCandidate[]>([]);
   const [searchHint, setSearchHint] = useState("");
   const [hasSearchedCandidates, setHasSearchedCandidates] = useState(false);
+  const [isSearchingCandidates, setIsSearchingCandidates] = useState(false);
   const [pillarWarning, setPillarWarning] = useState("");
   const [notes, setNotes] = useState("");
   const [gender, setGender] = useState<"男" | "女">("男");
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
-  const normalizedReferenceDateTime =
-    referenceSolarDateTime ||
-    (referenceYear && !Number.isNaN(Number(referenceYear))
-      ? `${referenceYear}-01-01T12:00`
-      : "");
+  const normalizedReferenceDateTime = selectedCandidateDate;
   const pillarYear = `${yearStem}${yearBranch}`;
   const pillarMonth = `${monthStem}${monthBranch}`;
   const pillarDay = `${dayStem}${dayBranch}`;
@@ -208,7 +205,11 @@ export default function AddRecordPage() {
       setSaveMessage("四柱模式下请先完整选择年、月、日、时天干地支。");
       return;
     }
-    const pillarReferenceDateTime = normalizedReferenceDateTime;
+    if (inputMode === "pillars" && !selectedCandidateDate) {
+      setSaveMessage("请先从候选日期中选择一个匹配时间后再开始排盘。");
+      return;
+    }
+    const pillarReferenceDateTime = selectedCandidateDate;
     const [pillarReferenceDate = "", pillarReferenceTime = ""] = pillarReferenceDateTime.split("T");
     setIsSaving(true);
     const nextRecord: BaziRecord = {
@@ -242,43 +243,48 @@ export default function AddRecordPage() {
   const handleFindCandidateYears = useCallback(() => {
     setHasSearchedCandidates(true);
     if (!isPillarInputComplete) {
-      setCandidateDateTimes([]);
+      setCandidateDates([]);
       setSearchHint("请先完整选择年、月、日、时四柱后再搜索匹配日期。");
       return;
     }
+    setIsSearchingCandidates(true);
     const start = Number(searchStartYear);
     const end = Number(searchEndYear);
     if (Number.isNaN(start) || Number.isNaN(end)) {
       setSearchHint("请先填写有效的查找范围年份。");
+      setIsSearchingCandidates(false);
       return;
     }
     if (start > end) {
       setSearchHint("查找范围无效：起始年份不能大于结束年份。");
+      setIsSearchingCandidates(false);
       return;
     }
-    const candidates = findSolarCandidatesByPillars(
-      {
-        year: pillarYear,
-        month: pillarMonth,
-        day: pillarDay,
-        time: pillarTime
-      },
-      start,
-      end
-    );
-    if (!candidates.length) {
-      setCandidateDateTimes([]);
-      setSearchHint("未找到匹配日期，请检查干支组合是否正确。");
-      return;
-    }
-    setCandidateDateTimes(candidates);
-    setReferenceSolarDateTime((currentValue) =>
-      currentValue && candidates.some((item) => item.value === currentValue)
-        ? currentValue
-        : candidates[0].value
-    );
-    setReferenceYear(`${candidates[0].year}`);
-    setSearchHint(`已找到 ${candidates.length} 个候选日期，可直接选择。`);
+    window.setTimeout(() => {
+      const candidates = findSolarCandidatesByPillars(
+        {
+          year: pillarYear,
+          month: pillarMonth,
+          day: pillarDay,
+          time: pillarTime
+        },
+        start,
+        end
+      );
+      if (!candidates.length) {
+        setCandidateDates([]);
+        setSelectedCandidateDate("");
+        setSearchHint("未找到匹配日期，请检查干支组合是否正确。");
+        setIsSearchingCandidates(false);
+        return;
+      }
+      setCandidateDates(candidates);
+      setSelectedCandidateDate((currentValue) =>
+        currentValue && candidates.some((item) => item.value === currentValue) ? currentValue : ""
+      );
+      setSearchHint("已找到匹配日期，请手动选择一个候选日期。");
+      setIsSearchingCandidates(false);
+    }, 0);
   }, [isPillarInputComplete, pillarYear, pillarMonth, pillarDay, pillarTime, searchStartYear, searchEndYear]);
 
   useEffect(() => {
@@ -286,7 +292,8 @@ export default function AddRecordPage() {
       return;
     }
     if (!isPillarInputComplete) {
-      setCandidateDateTimes([]);
+      setCandidateDates([]);
+      setSelectedCandidateDate("");
       setSearchHint("请先完整选择年、月、日、时四柱后再搜索匹配日期。");
       return;
     }
@@ -340,20 +347,20 @@ export default function AddRecordPage() {
   }, [expectedTimeStem, dayStem, timeBranch, timeStemOptions]);
 
   const closestCandidateValue = useMemo(() => {
-    if (!candidateDateTimes.length) {
+    if (!candidateDates.length) {
       return "";
     }
     const targetYear = Number(referenceYear);
     if (!Number.isNaN(targetYear)) {
-      return [...candidateDateTimes].sort(
+      return [...candidateDates].sort(
         (left, right) => Math.abs(left.year - targetYear) - Math.abs(right.year - targetYear)
       )[0].value;
     }
     const currentYear = new Date().getFullYear();
-    return [...candidateDateTimes].sort(
+    return [...candidateDates].sort(
       (left, right) => Math.abs(left.year - currentYear) - Math.abs(right.year - currentYear)
     )[0].value;
-  }, [candidateDateTimes, referenceYear]);
+  }, [candidateDates, referenceYear]);
 
   const handleExportPoster = async () => {
     if (!resultPosterRef.current || !ganZhi) {
@@ -647,38 +654,18 @@ export default function AddRecordPage() {
             <div className="rounded-lg border border-[#e6ded2] bg-[#fbf8f3] px-3 py-2.5">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="grid gap-1.5 text-sm">
-                  <span>公历出生日期（基准）</span>
-                  <input
-                    name="referenceSolarDateTime"
-                    type="datetime-local"
-                    value={referenceSolarDateTime}
-                    onChange={(event) => setReferenceSolarDateTime(event.target.value)}
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm outline-none ring-slate-300 focus:ring"
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm">
                   <span>参考年份（可手输）</span>
                   <input
                     name="referenceYear"
                     type="number"
                     value={referenceYear}
-                    onChange={(event) => {
-                      const nextYear = event.target.value;
-                      setReferenceYear(nextYear);
-                      if (referenceSolarDateTime) {
-                        const timePart = referenceSolarDateTime.includes("T")
-                          ? referenceSolarDateTime.split("T")[1]
-                          : "12:00";
-                        const monthDayPart =
-                          referenceSolarDateTime.length >= 10
-                            ? referenceSolarDateTime.slice(5, 10)
-                            : "01-01";
-                        setReferenceSolarDateTime(`${nextYear}-${monthDayPart}T${timePart}`);
-                      }
-                    }}
+                    onChange={(event) => setReferenceYear(event.target.value)}
                     className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm outline-none ring-slate-300 focus:ring"
                   />
                 </label>
+                <div className="rounded-md border border-dashed border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-500">
+                  请先点击“搜索匹配日期”，再从下方候选卡片中手动选择一个日期作为排盘基准。
+                </div>
               </div>
               <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
                 <label className="grid gap-1 text-xs text-slate-600">
@@ -707,12 +694,12 @@ export default function AddRecordPage() {
                   搜索匹配日期
                 </button>
               </div>
-              {candidateDateTimes.length ? (
+              {candidateDates.length ? (
                 <div className="mt-3 space-y-2">
                   <h4 className="text-sm font-medium text-slate-700">候选日期</h4>
                   <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                    {candidateDateTimes.map((candidate) => {
-                      const isSelected = candidate.value === referenceSolarDateTime;
+                    {candidateDates.map((candidate) => {
+                      const isSelected = candidate.value === selectedCandidateDate;
                       const isClosest = candidate.value === closestCandidateValue;
                       const hasReferenceYear = !Number.isNaN(Number(referenceYear));
                       return (
@@ -720,7 +707,7 @@ export default function AddRecordPage() {
                           key={candidate.value}
                           type="button"
                           onClick={() => {
-                            setReferenceSolarDateTime(candidate.value);
+                            setSelectedCandidateDate(candidate.value);
                             setReferenceYear(`${candidate.year}`);
                             const [nextDate = "", nextTime = ""] = candidate.value.split("T");
                             setBirthDate(nextDate);
@@ -754,7 +741,9 @@ export default function AddRecordPage() {
                 </div>
               ) : (
                 <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-gray-50 px-3 py-3 text-xs text-slate-500">
-                  {hasSearchedCandidates
+                  {isSearchingCandidates
+                    ? "正在穿越时空搜寻匹配年份..."
+                    : hasSearchedCandidates
                     ? "未找到匹配日期，请检查干支组合是否正确。"
                     : "正在根据干支搜索匹配的日期..."}
                 </div>
@@ -788,8 +777,8 @@ export default function AddRecordPage() {
                   birthTime:
                     inputMode === "pillars"
                       ? `四柱录入${
-                          referenceSolarDateTime
-                            ? `（参考公历 ${referenceSolarDateTime.replace("T", " ")}）`
+                          selectedCandidateDate
+                            ? `（参考公历 ${selectedCandidateDate.replace("T", " ")}）`
                             : "（未设置参考公历时间）"
                         }`
                       : birthTime
@@ -798,7 +787,7 @@ export default function AddRecordPage() {
                   inputMode !== "pillars"
                     ? `${birthDate}_${birthTime}`
                     : `${pillarYear}_${pillarMonth}_${pillarDay}_${pillarTime}_${
-                        referenceSolarDateTime || "no_ref_time"
+                        selectedCandidateDate || "no_ref_time"
                       }`
                 }`}
                 rightActions={
@@ -833,10 +822,13 @@ export default function AddRecordPage() {
         {saveMessage ? (
           <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700">{saveMessage}</p>
         ) : null}
+        {inputMode === "pillars" && !selectedCandidateDate ? (
+          <p className="text-xs text-amber-700">请选择一个匹配的日期后再开始排盘。</p>
+        ) : null}
 
         <button
           type="submit"
-          disabled={isSaving}
+          disabled={isSaving || (inputMode === "pillars" && !selectedCandidateDate)}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSaving ? "排盘中..." : "开始排盘"}
