@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { GanZhiResult } from "@/lib/bazi";
 import PatternAnalysis from "@/components/pattern-analysis";
 import ShenShaBadge from "@/components/shen-sha-badge";
@@ -47,10 +47,10 @@ export default function FortuneCards({
 }: FortuneCardsProps) {
   const [shenShaMode, setShenShaMode] = useState<"compact" | "full">("compact");
   const [titleVisible, setTitleVisible] = useState(true);
+  const luckCardRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const getVisibleShenSha = (tags: string[]) => (shenShaMode === "compact" ? tags.slice(0, 3) : tags);
   const activeLuck =
     ganZhi.daYun.find((item) => item.index === activeLuckIndex) ?? ganZhi.currentDaYun ?? ganZhi.daYun[0] ?? null;
-  const activeLuckYears = activeLuck?.liuNianList?.length ? activeLuck.liuNianList : ganZhi.liuNian;
 
   useEffect(() => {
     setTitleVisible(false);
@@ -58,6 +58,15 @@ export default function FortuneCards({
       setTitleVisible(true);
     }, 20);
     return () => window.clearTimeout(timer);
+  }, [activeLuckIndex]);
+  useEffect(() => {
+    if (activeLuckIndex === null) {
+      return;
+    }
+    const card = luckCardRefs.current[activeLuckIndex];
+    if (card) {
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   }, [activeLuckIndex]);
 
   return (
@@ -114,6 +123,9 @@ export default function FortuneCards({
           return (
             <div
               key={`${item.index}-${item.ganZhi}`}
+              ref={(node) => {
+                luckCardRefs.current[item.index] = node;
+              }}
               onClick={() => onActiveLuckChange(item.index)}
               className={`min-h-[172px] cursor-pointer rounded-md border px-2 py-2 transition-colors duration-150 touch-manipulation active:scale-[0.99] active:brightness-95 ${
                 isCurrent
@@ -179,38 +191,40 @@ export default function FortuneCards({
                   <span className="text-[10px] text-slate-400">无神煞</span>
                 )}
               </div>
+              {isCurrent ? (
+                <div className="mt-2 rounded-md border border-[#d7c5af] bg-white/80 p-1.5">
+                  <p className="mb-1 text-[10px] text-slate-500">流年十年全显（点击联动顶部流年柱）</p>
+                  <div className="grid grid-cols-5 gap-1">
+                    {(item.liuNianList?.length ? item.liuNianList : ganZhi.liuNian).map((yearItem) => {
+                      const isSelected = activeYear?.startYear === yearItem.startYear;
+                      const isCurrentYear = yearItem.ganZhi === ganZhi.currentLiuNian;
+                      return (
+                        <button
+                          key={`year-in-luck-${item.index}-${yearItem.startYear}-${yearItem.ganZhi}`}
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onActiveYearChange(yearItem);
+                          }}
+                          className={`rounded border px-1 py-1 text-center transition ${
+                            isSelected
+                              ? "border-2 border-[#4b5a78] bg-[#e9eef8] text-[#2e3c56]"
+                              : isCurrentYear
+                                ? "border-[#7ea1d8] bg-[#edf3ff] text-[#2e4b7d]"
+                                : "border-slate-200 bg-white text-slate-700"
+                          }`}
+                        >
+                          <p className="text-[10px] font-semibold leading-4">{yearItem.ganZhi}</p>
+                          <p className="text-[9px] leading-4 text-slate-500">{yearItem.startYear}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
           );
         })}
-      </div>
-      <div className="space-y-2 border-t border-[#d9c5ad] pt-2">
-        <p className="font-semibold tracking-[0.2em] text-[#6a4729]">流年</p>
-        <p className="text-[11px] text-slate-500">点击年份可同步更新顶部“流年”柱位。</p>
-        <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-5">
-          {activeLuckYears.map((item) => {
-            const isCurrent = activeYear?.startYear === item.startYear;
-            return (
-              <button
-                key={`liunian-${item.startYear}-${item.ganZhi}`}
-                type="button"
-                onClick={() => onActiveYearChange(item)}
-                className={`rounded-md border px-2 py-2 text-left transition duration-150 touch-manipulation active:scale-[0.99] active:brightness-95 ${
-                  isCurrent
-                    ? "border-2 border-[#4b5a78] bg-[#e9eef8] text-[#2e3c56]"
-                    : "border-slate-200 bg-white/70 text-slate-700"
-                }`}
-              >
-                <p className="text-xs font-semibold">
-                  {item.startYear} · {item.ganZhi}
-                </p>
-                <p className="mt-0.5 text-[10px] text-slate-500">{item.startAge}岁</p>
-                <p className="mt-1 text-[10px] text-slate-600">
-                  {item.stemShiShen || "--"} · {item.diShi}
-                </p>
-              </button>
-            );
-          })}
-        </div>
       </div>
     </div>
   );
