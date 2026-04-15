@@ -83,6 +83,41 @@ function getShiShenColorClass(shiShen: string): string {
   return SHI_SHEN_COLOR_CLASS_MAP[shiShen] ?? "text-slate-600";
 }
 
+function getStemWuXingColor(stem: string): string {
+  if ("甲乙".includes(stem)) return "text-[#2d8a4e]";
+  if ("丙丁".includes(stem)) return "text-[#cc3333]";
+  if ("戊己".includes(stem)) return "text-[#8b4513]";
+  if ("庚辛".includes(stem)) return "text-[#b39b7d]";
+  if ("壬癸".includes(stem)) return "text-[#1e90ff]";
+  return "text-slate-600";
+}
+
+const NAYIN_MAP: Record<string, string> = {
+  甲子: "海中金", 乙丑: "海中金", 丙寅: "炉中火", 丁卯: "炉中火", 戊辰: "大林木", 己巳: "大林木",
+  庚午: "路旁土", 辛未: "路旁土", 壬申: "剑锋金", 癸酉: "剑锋金", 甲戌: "山头火", 乙亥: "山头火",
+  丙子: "涧下水", 丁丑: "涧下水", 戊寅: "城头土", 己卯: "城头土", 庚辰: "白蜡金", 辛巳: "白蜡金",
+  壬午: "杨柳木", 癸未: "杨柳木", 甲申: "泉中水", 乙酉: "泉中水", 丙戌: "屋上土", 丁亥: "屋上土",
+  戊子: "霹雳火", 己丑: "霹雳火", 庚寅: "松柏木", 辛卯: "松柏木", 壬辰: "长流水", 癸巳: "长流水",
+  甲午: "砂中金", 乙未: "砂中金", 丙申: "山下火", 丁酉: "山下火", 戊戌: "平地木", 己亥: "平地木",
+  庚子: "壁上土", 辛丑: "壁上土", 壬寅: "金箔金", 癸卯: "金箔金", 甲辰: "覆灯火", 乙巳: "覆灯火",
+  丙午: "天河水", 丁未: "天河水", 戊申: "大驿土", 己酉: "大驿土", 庚戌: "钗钏金", 辛亥: "钗钏金",
+  壬子: "桑柘木", 癸丑: "桑柘木", 甲寅: "大溪水", 乙卯: "大溪水", 丙辰: "沙中土", 丁巳: "沙中土",
+  戊午: "天上火", 己未: "天上火", 庚申: "石榴木", 辛酉: "石榴木", 壬戌: "大海水", 癸亥: "大海水"
+};
+
+function getNaYin(ganZhi: string): string {
+  return NAYIN_MAP[ganZhi] ?? "--";
+}
+
+function getNaYinColorClass(naYin: string): string {
+  if (naYin.endsWith("木")) return "text-[#2d8a4e]";
+  if (naYin.endsWith("火")) return "text-[#cc3333]";
+  if (naYin.endsWith("土")) return "text-[#8b4513]";
+  if (naYin.endsWith("金")) return "text-[#b39b7d]";
+  if (naYin.endsWith("水")) return "text-[#1e90ff]";
+  return "text-zinc-600";
+}
+
 type BaziTableProps = {
   ganZhi: GanZhiResult;
   activeDaYun?: GanZhiResult["daYun"][number] | null;
@@ -154,6 +189,23 @@ export default function BaziTable({ ganZhi, activeDaYun, activeLiuNian }: BaziTa
     });
     return new Map(entries);
   })();
+  const hideGanColumnMap = {
+    流年:
+      effectiveLiuNian?.hideGanShiShen.map((entry) => ({ stem: entry.hideGan, shiShen: entry.shiShen })) ?? [],
+    大运: effectiveDaYun?.hideGanShiShen.map((entry) => ({ stem: entry.hideGan, shiShen: entry.shiShen })) ?? [],
+    年柱: ganZhi.yearHideGan.map((stem, index) => ({ stem, shiShen: ganZhi.yearShiShenZhi[index] ?? "" })),
+    月柱: ganZhi.monthHideGan.map((stem, index) => ({ stem, shiShen: ganZhi.monthShiShenZhi[index] ?? "" })),
+    日柱: ganZhi.dayHideGan.map((stem, index) => ({ stem, shiShen: ganZhi.dayShiShenZhi[index] ?? "" })),
+    时柱: ganZhi.timeHideGan.map((stem, index) => ({ stem, shiShen: ganZhi.timeShiShenZhi[index] ?? "" }))
+  } as const;
+  const naYinMap = {
+    流年: getNaYin(effectiveLiuNian?.ganZhi ?? ""),
+    大运: getNaYin(effectiveDaYun?.ganZhi ?? ""),
+    年柱: getNaYin(ganZhi.year),
+    月柱: getNaYin(ganZhi.month),
+    日柱: getNaYin(ganZhi.day),
+    时柱: getNaYin(ganZhi.time)
+  } as const;
 
   return (
     <>
@@ -274,23 +326,42 @@ export default function BaziTable({ ganZhi, activeDaYun, activeLiuNian }: BaziTa
             </div>
           ))}
           <div className={`border-b border-r border-zinc-200 bg-zinc-50 py-1 text-zinc-500 ${metaTextClass} ${alignCenterClass}`}>藏干</div>
-          {[
-            effectiveLiuNian?.hideGanShiShen.map((entry) => entry.hideGan).join(" ") ?? "--",
-            effectiveDaYun?.hideGanShiShen.map((entry) => entry.hideGan).join(" ") ?? "--",
-            ganZhi.yearHideGan,
-            ganZhi.monthHideGan,
-            ganZhi.dayHideGan,
-            ...(hasHourPillar ? [ganZhi.timeHideGan] : [])
-          ].map(
-            (value, index) => (
+          {pillarColumns.map((column, index) => {
+            const hideGanItems = hideGanColumnMap[column.label as keyof typeof hideGanColumnMap] ?? [];
+            return (
               <div
-                key={`hidegan-${index}`}
-                className={`border-b border-r border-zinc-200 px-0.5 py-1 text-zinc-600 last:border-r-0 ${metaTextClass} ${alignCenterClass} whitespace-nowrap`}
+                key={`hidegan-${column.label}-${index}`}
+                className={`border-b border-r border-zinc-200 px-0.5 py-1 last:border-r-0 ${alignCenterClass}`}
               >
-                {Array.isArray(value) ? value.join(" ") : value}
+                {hideGanItems.length ? (
+                  <div className="flex flex-col items-center justify-center gap-0.5">
+                    {hideGanItems.map((item, itemIndex) => (
+                      <div key={`hidegan-item-${column.label}-${item.stem}-${itemIndex}`} className="leading-4">
+                        <span className={`text-[11px] font-semibold ${getStemWuXingColor(item.stem)}`}>
+                          {item.stem}
+                        </span>
+                        <span className="ml-1 text-[9px] text-zinc-500">{item.shiShen || "--"}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className={`${metaTextClass} text-zinc-400`}>--</span>
+                )}
               </div>
-            )
-          )}
+            );
+          })}
+          <div className={`border-b border-r border-zinc-200 bg-zinc-50 py-1 text-zinc-500 ${metaTextClass} ${alignCenterClass}`}>纳音</div>
+          {pillarColumns.map((column, index) => {
+            const naYin = naYinMap[column.label as keyof typeof naYinMap] ?? "--";
+            return (
+              <div
+                key={`nayin-${column.label}-${index}`}
+                className={`border-b border-r border-zinc-200 border-t border-zinc-100 px-0.5 py-1 last:border-r-0 ${metaTextClass} ${alignCenterClass}`}
+              >
+                <span className={getNaYinColorClass(naYin)}>{naYin}</span>
+              </div>
+            );
+          })}
           <div className={`border-b border-r border-zinc-200 bg-zinc-50 py-1 text-zinc-500 ${metaTextClass} ${alignCenterClass}`}>神煞</div>
           {pillarColumns.map((column, index) => {
             const value = shenShaDisplayMap.get(column.label);
