@@ -7,6 +7,8 @@ import ShenShaBadge from "@/components/shen-sha-badge";
 
 type FortuneCardsProps = {
   ganZhi: GanZhiResult;
+  activeLuckIndex: number | null;
+  onActiveLuckChange: (index: number) => void;
 };
 
 function getShiShenTagClass(shiShen: string): string {
@@ -34,17 +36,12 @@ function getShiShenShortColorClass(shortName: string): string {
   return "text-slate-500";
 }
 
-export default function FortuneCards({ ganZhi }: FortuneCardsProps) {
+export default function FortuneCards({ ganZhi, activeLuckIndex, onActiveLuckChange }: FortuneCardsProps) {
   const [shenShaMode, setShenShaMode] = useState<"compact" | "full">("compact");
-  const [activeLuckIndex, setActiveLuckIndex] = useState<number | null>(ganZhi.currentDaYun?.index ?? null);
   const [titleVisible, setTitleVisible] = useState(true);
   const getVisibleShenSha = (tags: string[]) => (shenShaMode === "compact" ? tags.slice(0, 3) : tags);
   const activeLuck =
     ganZhi.daYun.find((item) => item.index === activeLuckIndex) ?? ganZhi.currentDaYun ?? ganZhi.daYun[0] ?? null;
-
-  useEffect(() => {
-    setActiveLuckIndex(ganZhi.currentDaYun?.index ?? ganZhi.daYun[0]?.index ?? null);
-  }, [ganZhi.currentDaYun, ganZhi.daYun]);
 
   useEffect(() => {
     setTitleVisible(false);
@@ -108,7 +105,7 @@ export default function FortuneCards({ ganZhi }: FortuneCardsProps) {
           return (
             <div
               key={`${item.index}-${item.ganZhi}`}
-              onClick={() => setActiveLuckIndex(item.index)}
+              onClick={() => onActiveLuckChange(item.index)}
               className={`min-h-[172px] cursor-pointer rounded-md border px-2 py-2 transition-colors duration-150 touch-manipulation active:scale-[0.99] active:brightness-95 ${
                 isCurrent
                   ? "border-2 border-[#b39b7d] bg-[#efe2d2] text-[#5c3d25]"

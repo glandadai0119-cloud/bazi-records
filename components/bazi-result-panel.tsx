@@ -52,6 +52,9 @@ export default function BaziResultPanel({
   rightActions
 }: BaziResultPanelProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("基本排盘");
+  const [activeDaYunIndex, setActiveDaYunIndex] = useState<number | null>(
+    ganZhi.currentDaYun?.index ?? ganZhi.daYun[0]?.index ?? null
+  );
   const [note, setNote] = useState("");
   const [savedTip, setSavedTip] = useState("");
   const storageKey = useMemo(
@@ -126,6 +129,14 @@ export default function BaziResultPanel({
     () => (hasHourPillar ? [...basePillarItems, { label: "时柱", value: ganZhi.time }] : basePillarItems),
     [basePillarItems, ganZhi.time, hasHourPillar]
   );
+  const activeDaYun = useMemo(
+    () => ganZhi.daYun.find((item) => item.index === activeDaYunIndex) ?? ganZhi.currentDaYun ?? ganZhi.daYun[0] ?? null,
+    [activeDaYunIndex, ganZhi.currentDaYun, ganZhi.daYun]
+  );
+
+  useEffect(() => {
+    setActiveDaYunIndex(ganZhi.currentDaYun?.index ?? ganZhi.daYun[0]?.index ?? null);
+  }, [ganZhi.currentDaYun, ganZhi.daYun]);
 
   const handleSaveNote = () => {
     if (typeof window === "undefined" || !storageKey) {
@@ -189,7 +200,7 @@ export default function BaziResultPanel({
               </div>
             ) : null}
           </div>
-          <BaziTable ganZhi={ganZhi} />
+          <BaziTable ganZhi={ganZhi} activeDaYun={activeDaYun} />
           {!hasHourPillar ? (
             <div className="mx-3 mt-2 rounded-md border border-[#e6ded2] bg-[#fbf8f3] px-3 py-2">
               <p className="text-xs font-medium text-slate-700">五行比例（缺时柱时的参考补位）</p>
@@ -209,7 +220,11 @@ export default function BaziResultPanel({
               </div>
             </div>
           ) : null}
-          <FortuneCards ganZhi={ganZhi} />
+          <FortuneCards
+            ganZhi={ganZhi}
+            activeLuckIndex={activeDaYunIndex}
+            onActiveLuckChange={setActiveDaYunIndex}
+          />
           {!hasHourPillar ? (
             <p className="px-3 text-center text-xs font-medium text-amber-700">
               注：当前由于缺失出生时辰，仅根据“三柱”生成，结果仅供参考。
