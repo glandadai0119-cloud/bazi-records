@@ -8,7 +8,11 @@ import {
   type PillarSolarCandidate,
   getGanZhiFromBirthTime,
   getGanZhiFromLunarBirthTime,
-  getGanZhiFromPillars
+  getGanZhiFromPillars,
+  MAX_SUPPORTED_DATE,
+  MAX_SUPPORTED_YEAR,
+  MIN_SUPPORTED_DATE,
+  MIN_SUPPORTED_YEAR
 } from "@/lib/bazi";
 import type { BaziRecord } from "@/data/mock-records";
 import { appendRecord } from "@/lib/records-storage";
@@ -90,6 +94,8 @@ function prioritizeRecommended(options: readonly string[], recommended: string |
 
 export default function AddRecordPage() {
   const router = useRouter();
+  const currentYear = new Date().getFullYear();
+  const defaultReferenceYear = Math.min(MAX_SUPPORTED_YEAR, Math.max(MIN_SUPPORTED_YEAR, currentYear));
   const resultPosterRef = useRef<HTMLDivElement | null>(null);
   const [name, setName] = useState("");
   const [inputMode, setInputMode] = useState<"solar" | "lunar" | "pillars">("solar");
@@ -104,9 +110,9 @@ export default function AddRecordPage() {
   const [timeStem, setTimeStem] = useState("");
   const [timeBranch, setTimeBranch] = useState("");
   const [selectedCandidateDate, setSelectedCandidateDate] = useState("");
-  const [referenceYear, setReferenceYear] = useState(`${new Date().getFullYear()}`);
-  const [searchStartYear, setSearchStartYear] = useState("1900");
-  const [searchEndYear, setSearchEndYear] = useState("2030");
+  const [referenceYear, setReferenceYear] = useState(`${defaultReferenceYear}`);
+  const [searchStartYear, setSearchStartYear] = useState(`${MIN_SUPPORTED_YEAR}`);
+  const [searchEndYear, setSearchEndYear] = useState(`${MAX_SUPPORTED_YEAR}`);
   const [candidateDates, setCandidateDates] = useState<PillarSolarCandidate[]>([]);
   const [searchHint, setSearchHint] = useState("");
   const [hasSearchedCandidates, setHasSearchedCandidates] = useState(false);
@@ -255,6 +261,11 @@ export default function AddRecordPage() {
       setIsSearchingCandidates(false);
       return;
     }
+    if (start < MIN_SUPPORTED_YEAR || end > MAX_SUPPORTED_YEAR) {
+      setSearchHint(`查找范围需在 ${MIN_SUPPORTED_YEAR}-${MAX_SUPPORTED_YEAR} 年之间。`);
+      setIsSearchingCandidates(false);
+      return;
+    }
     if (start > end) {
       setSearchHint("查找范围无效：起始年份不能大于结束年份。");
       setIsSearchingCandidates(false);
@@ -351,12 +362,12 @@ export default function AddRecordPage() {
       return "";
     }
     const targetYear = Number(referenceYear);
-    if (!Number.isNaN(targetYear)) {
+    if (!Number.isNaN(targetYear) && targetYear >= MIN_SUPPORTED_YEAR && targetYear <= MAX_SUPPORTED_YEAR) {
       return [...candidateDates].sort(
         (left, right) => Math.abs(left.year - targetYear) - Math.abs(right.year - targetYear)
       )[0].value;
     }
-    const currentYear = new Date().getFullYear();
+    const currentYear = Math.min(MAX_SUPPORTED_YEAR, Math.max(MIN_SUPPORTED_YEAR, new Date().getFullYear()));
     return [...candidateDates].sort(
       (left, right) => Math.abs(left.year - currentYear) - Math.abs(right.year - currentYear)
     )[0].value;
@@ -368,13 +379,23 @@ export default function AddRecordPage() {
     }
     setIsExporting(true);
     const html2canvas = (await import("html2canvas")).default;
+    const targetWidth = resultPosterRef.current.clientWidth;
+    const targetHeight = Math.round((targetWidth * 16) / 9);
     const canvas = await html2canvas(resultPosterRef.current, {
       backgroundColor: "#f8fafc",
       scale: 3,
+      width: targetWidth,
+      height: targetHeight,
       ignoreElements: (element) =>
         element.getAttribute("data-html2canvas-ignore") === "true" ||
         element.getAttribute("data-export-controls") === "true",
       onclone: (doc) => {
+        const posterRoot = doc.querySelector("[data-poster-root='true']");
+        if (posterRoot instanceof HTMLElement) {
+          posterRoot.style.width = `${targetWidth}px`;
+          posterRoot.style.height = `${targetHeight}px`;
+          posterRoot.style.overflow = "hidden";
+        }
         const controls = doc.querySelectorAll("[data-export-controls='true']");
         controls.forEach((node) => {
           if (node instanceof HTMLElement) {
@@ -491,6 +512,8 @@ export default function AddRecordPage() {
                 type="date"
                 value={birthDate}
                 onChange={(event) => setBirthDate(event.target.value)}
+                min={MIN_SUPPORTED_DATE}
+                max={MAX_SUPPORTED_DATE}
                 className="rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-300 focus:ring"
               />
             </label>
@@ -660,6 +683,8 @@ export default function AddRecordPage() {
                     type="number"
                     value={referenceYear}
                     onChange={(event) => setReferenceYear(event.target.value)}
+                    min={MIN_SUPPORTED_YEAR}
+                    max={MAX_SUPPORTED_YEAR}
                     className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm outline-none ring-slate-300 focus:ring"
                   />
                 </label>
@@ -674,6 +699,8 @@ export default function AddRecordPage() {
                     type="number"
                     value={searchStartYear}
                     onChange={(event) => setSearchStartYear(event.target.value)}
+                    min={MIN_SUPPORTED_YEAR}
+                    max={MAX_SUPPORTED_YEAR}
                     className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none ring-slate-300 focus:ring"
                   />
                 </label>
@@ -683,6 +710,8 @@ export default function AddRecordPage() {
                     type="number"
                     value={searchEndYear}
                     onChange={(event) => setSearchEndYear(event.target.value)}
+                    min={MIN_SUPPORTED_YEAR}
+                    max={MAX_SUPPORTED_YEAR}
                     className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none ring-slate-300 focus:ring"
                   />
                 </label>
@@ -701,7 +730,11 @@ export default function AddRecordPage() {
                     {candidateDates.map((candidate) => {
                       const isSelected = candidate.value === selectedCandidateDate;
                       const isClosest = candidate.value === closestCandidateValue;
-                      const hasReferenceYear = !Number.isNaN(Number(referenceYear));
+                      const parsedReferenceYear = Number(referenceYear);
+                      const hasReferenceYear =
+                        !Number.isNaN(parsedReferenceYear) &&
+                        parsedReferenceYear >= MIN_SUPPORTED_YEAR &&
+                        parsedReferenceYear <= MAX_SUPPORTED_YEAR;
                       return (
                         <button
                           key={candidate.value}
@@ -763,7 +796,8 @@ export default function AddRecordPage() {
           {ganZhi ? (
             <div
               ref={resultPosterRef}
-              className="space-y-3 rounded-xl bg-slate-50 p-4"
+              data-poster-root="true"
+              className="space-y-3 overflow-hidden rounded-xl bg-slate-50 p-4"
             >
               <BaziResultPanel
                 ganZhi={ganZhi}

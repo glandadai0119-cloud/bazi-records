@@ -110,6 +110,22 @@ export default function BaziResultPanel({
     );
     return items.sort((left, right) => right.score - left.score);
   }, [ganZhi.dayHideGan, ganZhi.monthHideGan, ganZhi.timeHideGan, ganZhi.yearHideGan]);
+  const hasHourPillar = useMemo(() => {
+    const value = ganZhi.time.trim();
+    return value.length >= 2 && value !== "--";
+  }, [ganZhi.time]);
+  const basePillarItems = useMemo(
+    () => [
+      { label: "年柱", value: ganZhi.year },
+      { label: "月柱", value: ganZhi.month },
+      { label: "日柱", value: ganZhi.day }
+    ],
+    [ganZhi.day, ganZhi.month, ganZhi.year]
+  );
+  const displayPillarItems = useMemo(
+    () => (hasHourPillar ? [...basePillarItems, { label: "时柱", value: ganZhi.time }] : basePillarItems),
+    [basePillarItems, ganZhi.time, hasHourPillar]
+  );
 
   const handleSaveNote = () => {
     if (typeof window === "undefined" || !storageKey) {
@@ -122,13 +138,13 @@ export default function BaziResultPanel({
 
   return (
     <div className="relative space-y-3 rounded-lg border border-zinc-300 bg-white p-0 font-['Songti_SC','STSong','Noto_Serif_SC',serif] text-slate-800">
-      <div className="grid grid-cols-4 rounded-t-lg bg-zinc-900 text-center text-sm text-zinc-300">
+      <div className="grid grid-cols-4 rounded-t-lg bg-zinc-900 text-center text-xs text-zinc-300">
         {TAB_LIST.map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setActiveTab(tab)}
-            className={`py-2 transition-colors ${
+            className={`py-1.5 transition-colors ${
               activeTab === tab ? "bg-zinc-800 text-white" : "text-zinc-300"
             } ${
               tab === "断事笔记" ? "" : "border-r border-zinc-700"
@@ -152,8 +168,53 @@ export default function BaziResultPanel({
       ) : null}
       {activeTab === "基本排盘" ? (
         <>
+          <div className="px-3 pb-1">
+            <div className={`grid gap-2 ${hasHourPillar ? "grid-cols-4" : "grid-cols-3"}`}>
+              {displayPillarItems.map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-md border border-[#e6ded2] bg-[#fbf8f3] px-2 py-2 text-center"
+                >
+                  <p className="text-xs text-slate-500">{item.label}</p>
+                  <p className="mt-1 text-xl font-semibold tracking-[0.08em] text-slate-800">{item.value || "--"}</p>
+                </div>
+              ))}
+            </div>
+            {!hasHourPillar ? (
+              <div className="mt-2 rounded-md border border-dashed border-[#d8c8b3] bg-[#fdf8f1] px-3 py-2">
+                <p className="text-sm font-medium text-[#6a4729]">时辰未知（完善信息解锁精准详批）</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  建议补充出生时辰后重新排盘；也可在此放置品牌二维码与服务指引，提升海报传播效率。
+                </p>
+              </div>
+            ) : null}
+          </div>
           <BaziTable ganZhi={ganZhi} />
+          {!hasHourPillar ? (
+            <div className="mx-3 mt-2 rounded-md border border-[#e6ded2] bg-[#fbf8f3] px-3 py-2">
+              <p className="text-xs font-medium text-slate-700">五行比例（缺时柱时的参考补位）</p>
+              <div className="mt-2 space-y-1.5">
+                {hiddenStemDistribution.map((item) => (
+                  <div key={`quick-${item.element}`} className="grid grid-cols-[24px_1fr_48px] items-center gap-2">
+                    <span className="text-[11px] text-slate-700">{item.element}</span>
+                    <div className="h-1.5 overflow-hidden rounded bg-slate-100">
+                      <div
+                        className={`h-full rounded ${WU_XING_BAR_STYLE_MAP[item.element]}`}
+                        style={{ width: `${item.percent.toFixed(1)}%` }}
+                      />
+                    </div>
+                    <span className="text-right text-[11px] text-slate-500">{item.percent.toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <FortuneCards ganZhi={ganZhi} />
+          {!hasHourPillar ? (
+            <p className="px-3 text-center text-xs font-medium text-amber-700">
+              注：当前由于缺失出生时辰，仅根据“三柱”生成，结果仅供参考。
+            </p>
+          ) : null}
           <p className="text-center text-xs tracking-[0.12em] text-slate-500">合盘：{ganZhi.full}</p>
         </>
       ) : null}

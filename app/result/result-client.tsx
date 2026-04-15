@@ -84,13 +84,23 @@ export default function ResultClient() {
     }
     setIsExporting(true);
     const html2canvas = (await import("html2canvas")).default;
+    const targetWidth = posterRef.current.clientWidth;
+    const targetHeight = Math.round((targetWidth * 16) / 9);
     const canvas = await html2canvas(posterRef.current, {
       backgroundColor: "#f8fafc",
       scale: 3,
+      width: targetWidth,
+      height: targetHeight,
       ignoreElements: (element) =>
         element.getAttribute("data-html2canvas-ignore") === "true" ||
         element.getAttribute("data-export-controls") === "true",
       onclone: (doc) => {
+        const posterRoot = doc.querySelector("[data-poster-root='true']");
+        if (posterRoot instanceof HTMLElement) {
+          posterRoot.style.width = `${targetWidth}px`;
+          posterRoot.style.height = `${targetHeight}px`;
+          posterRoot.style.overflow = "hidden";
+        }
         const controls = doc.querySelectorAll("[data-export-controls='true']");
         controls.forEach((node) => {
           if (node instanceof HTMLElement) {
@@ -162,7 +172,11 @@ export default function ResultClient() {
       </article>
 
       {ganZhi ? (
-        <div ref={posterRef} className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+        <div
+          ref={posterRef}
+          data-poster-root="true"
+          className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
+        >
           <BaziResultPanel
             ganZhi={ganZhi}
             basicInfo={{

@@ -1,5 +1,10 @@
 import { Lunar, Solar } from "lunar-javascript";
 
+export const MIN_SUPPORTED_YEAR = 1400;
+export const MAX_SUPPORTED_YEAR = 2030;
+export const MIN_SUPPORTED_DATE = "1400-01-01";
+export const MAX_SUPPORTED_DATE = "2030-12-31";
+
 type WuXing = "wood" | "fire" | "earth" | "metal" | "water";
 
 type GanYinYang = "yang" | "yin";
@@ -18,6 +23,7 @@ type DaYunOrLiuNianItem = {
     short: string;
   }>;
   hideGanShiShenShort: string[];
+  diShi: string;
   shenSha: string[];
 };
 
@@ -258,9 +264,28 @@ const WU_XING_CN_MAP: Record<WuXing, string> = {
   water: "水"
 };
 
+const DI_SHI_ORDER = ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"] as const;
+
+const DI_SHI_START_ZHI_MAP: Record<string, string> = {
+  甲: "亥",
+  乙: "午",
+  丙: "寅",
+  丁: "酉",
+  戊: "寅",
+  己: "酉",
+  庚: "巳",
+  辛: "子",
+  壬: "申",
+  癸: "卯"
+};
+
 function getGanZhiParts(ganZhi: string): { gan: string; zhi: string } {
   const [gan = "", zhi = ""] = Array.from(ganZhi);
   return { gan, zhi };
+}
+
+function isYearInSupportedRange(year: number): boolean {
+  return year >= MIN_SUPPORTED_YEAR && year <= MAX_SUPPORTED_YEAR;
 }
 
 function getShiShenByGan(dayGan: string, targetGan: string): string {
@@ -436,6 +461,18 @@ function getPatternPersonalitySummary(patternName: string): string {
   return map[patternName] ?? "你的行为风格整体平衡，既有执行力也有适应力，适合长期成长型路径。";
 }
 
+function getDiShiByDayGanAndZhi(dayGan: string, zhi: string): string {
+  const startZhi = DI_SHI_START_ZHI_MAP[dayGan];
+  const startIndex = ZHI_LIST.indexOf(startZhi);
+  const zhiIndex = ZHI_LIST.indexOf(zhi);
+  if (startIndex < 0 || zhiIndex < 0) {
+    return "--";
+  }
+  const isYangGan = ["甲", "丙", "戊", "庚", "壬"].includes(dayGan);
+  const offset = isYangGan ? (zhiIndex - startIndex + 12) % 12 : (startIndex - zhiIndex + 12) % 12;
+  return DI_SHI_ORDER[offset] ?? "--";
+}
+
 /**
  * 根据日干和地支，输出地支藏干对应的十神信息。
  */
@@ -562,6 +599,9 @@ export function getGanZhiFromBirthTime(
   ) {
     return null;
   }
+  if (!isYearInSupportedRange(year)) {
+    return null;
+  }
 
   const solar = Solar.fromYmdHms(year, month, day, hour, minute, 0);
   return createGanZhiResultFromSolar(solar, year, gender);
@@ -582,6 +622,9 @@ export function getGanZhiFromLunarBirthTime(
   if (
     [year, month, day, hour, minute].some((value) => Number.isNaN(value))
   ) {
+    return null;
+  }
+  if (!isYearInSupportedRange(year)) {
     return null;
   }
 
@@ -606,7 +649,7 @@ export function getGanZhiFromPillars(
       pillars.day,
       pillars.time,
       2,
-      1900
+      MIN_SUPPORTED_YEAR
     );
   } catch {
     return null;
@@ -615,7 +658,7 @@ export function getGanZhiFromPillars(
     return null;
   }
   const referenceYear = Number(referenceSolarDateTime?.slice(0, 4));
-  const hasReferenceYear = !Number.isNaN(referenceYear);
+  const hasReferenceYear = !Number.isNaN(referenceYear) && isYearInSupportedRange(referenceYear);
   const solar = hasReferenceYear
     ? [...solarList].sort(
         (left, right) => Math.abs(left.getYear() - referenceYear) - Math.abs(right.getYear() - referenceYear)
@@ -633,7 +676,13 @@ export function findSolarCandidatesByPillars(
   if (!pillars.year || !pillars.month || !pillars.day || !pillars.time) {
     return [];
   }
-  if (Number.isNaN(startYear) || Number.isNaN(endYear) || startYear > endYear) {
+  if (
+    Number.isNaN(startYear) ||
+    Number.isNaN(endYear) ||
+    startYear > endYear ||
+    !isYearInSupportedRange(startYear) ||
+    !isYearInSupportedRange(endYear)
+  ) {
     return [];
   }
   let solarList: Solar[] = [];
@@ -693,32 +742,35 @@ function createGanZhiResultFromSolar(
   const dayMasterStrength = getDayMasterStrength(dayGan, pillars);
   const favorableElements = inferFavorableElements(dayGan, dayMasterStrength);
   const yun = eightChar.getYun(gender === "男" ? 1 : 0, 1);
-  const daYun = yun
-    .getDaYun(10)
-    .filter((item) => item.getIndex() > 0)
-    .map((item) => {
-      const daYunGanZhi = item.getGanZhi();
-      const { gan, zhi } = getGanZhiParts(daYunGanZhi);
-      const hideGanShiShen = getHideGanShiShen(dayGan, zhi);
-      return {
-        index: item.getIndex(),
-        ganZhi: daYunGanZhi,
-        startYear: item.getStartYear(),
-        endYear: item.getEndYear(),
-        startAge: item.getStartAge(),
-        endAge: item.getEndAge(),
-        stemShiShen: getShiShenByGan(dayGan, gan),
-        hideGanShiShen,
-        hideGanShiShenShort: hideGanShiShen.map((entry) => entry.short),
-        shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, daYunGanZhi)
-      };
-    });
+  const rawDaYun = yun.getDaYun(10).map((item) => {
+    const daYunGanZhi = item.getGanZhi();
+    const { gan, zhi } = getGanZhiParts(daYunGanZhi);
+    const hideGanShiShen = getHideGanShiShen(dayGan, zhi);
+    return {
+      index: item.getIndex(),
+      ganZhi: daYunGanZhi,
+      startYear: item.getStartYear(),
+      endYear: item.getEndYear(),
+      startAge: item.getStartAge(),
+      endAge: item.getEndAge(),
+      stemShiShen: getShiShenByGan(dayGan, gan),
+      hideGanShiShen,
+      hideGanShiShenShort: hideGanShiShen.map((entry) => entry.short),
+      diShi: getDiShiByDayGanAndZhi(dayGan, zhi),
+      shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, daYunGanZhi)
+    };
+  });
+  const daYun = rawDaYun.filter((item) => item.index > 0).length
+    ? rawDaYun.filter((item) => item.index > 0)
+    : rawDaYun;
   const baseYear = birthYear;
   const baseSolar = Solar.fromYmdHms(baseYear, solar.getMonth(), solar.getDay(), solar.getHour(), solar.getMinute(), 0);
   const currentDaYun =
-    daYun.find(
-      (item) => item.startYear <= baseYear && baseYear <= item.endYear
-    ) ?? null;
+    daYun.find((item) => item.startYear <= baseYear && baseYear <= item.endYear) ??
+    daYun.find((item) => baseYear < item.startYear) ??
+    daYun[0] ??
+    daYun[daYun.length - 1] ??
+    null;
   const liuNian = Array.from({ length: 7 }, (_, index) => {
     const targetYear = baseYear + index;
     const liuNianGanZhi = Solar.fromYmdHms(targetYear, 6, 1, 12, 0, 0)
@@ -736,6 +788,7 @@ function createGanZhiResultFromSolar(
       stemShiShen: getShiShenByGan(dayGan, gan),
       hideGanShiShen,
       hideGanShiShenShort: hideGanShiShen.map((entry) => entry.short),
+      diShi: getDiShiByDayGanAndZhi(dayGan, zhi),
       shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, liuNianGanZhi)
     };
   });

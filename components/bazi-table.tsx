@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import type { GanZhiResult } from "@/lib/bazi";
 
 type WuXing = "wood" | "fire" | "earth" | "metal" | "water";
@@ -87,14 +88,41 @@ type BaziTableProps = {
 };
 
 export default function BaziTable({ ganZhi }: BaziTableProps) {
+  const hasHourPillar = ganZhi.time.trim().length >= 2 && ganZhi.time !== "--";
   const pillarColumns = [
     { label: "流年", value: ganZhi.currentLiuNian },
     { label: "大运", value: ganZhi.currentDaYun?.ganZhi ?? "--" },
     { label: "年柱", value: ganZhi.year },
     { label: "月柱", value: ganZhi.month },
     { label: "日柱", value: ganZhi.day },
-    { label: "时柱", value: ganZhi.time }
-  ];
+    ...(hasHourPillar ? [{ label: "时柱", value: ganZhi.time }] : [])
+  ] as Array<{ label: string; value: string }>;
+  const desktopGridRef = useRef<HTMLDivElement | null>(null);
+  const [columnWidth, setColumnWidth] = useState(0);
+  const isNarrowColumn = columnWidth > 0 && columnWidth < 60;
+  const labelTextClass = isNarrowColumn ? "text-[10px]" : "text-[11px]";
+  const metaTextClass = isNarrowColumn ? "text-[10px]" : "text-[11px]";
+  const pillarTextClass = isNarrowColumn ? "text-[24px]" : "text-[28px]";
+  const shenShaMaxRows = isNarrowColumn ? 1 : 2;
+  const alignCenterClass = "text-center";
+
+  useEffect(() => {
+    if (!desktopGridRef.current || typeof window === "undefined" || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const element = desktopGridRef.current;
+    const updateColumnWidth = () => {
+      const baseLabelWidth = 52;
+      const next = Math.max(0, (element.clientWidth - baseLabelWidth) / pillarColumns.length);
+      setColumnWidth(next);
+    };
+    updateColumnWidth();
+    const observer = new ResizeObserver(() => {
+      updateColumnWidth();
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [pillarColumns.length]);
 
   const getColumnShenSha = (label: string): string[] => {
     if (label === "流年") return ganZhi.currentLiuNianDetail?.shenSha ?? [];
@@ -106,43 +134,51 @@ export default function BaziTable({ ganZhi }: BaziTableProps) {
     return [];
   };
 
+  const shenShaDisplayMap = (() => {
+    const entries = pillarColumns.map((column) => {
+      const tags = getColumnShenSha(column.label);
+      const compactTags = tags.slice(0, isNarrowColumn ? 2 : 4);
+      const rows = compactTags.reduce<string[][]>((acc, tag, tagIndex) => {
+        const rowIndex = Math.floor(tagIndex / 2);
+        if (!acc[rowIndex]) {
+          acc[rowIndex] = [];
+        }
+        acc[rowIndex].push(tag);
+        return acc;
+      }, []);
+      return [column.label, { tags, rows }] as const;
+    });
+    return new Map(entries);
+  })();
+
   return (
     <>
-      <div className="px-3 pb-1 sm:hidden">
-        <div className="space-y-2">
+      <div className="px-2 pb-1 sm:hidden">
+        <div className="space-y-1.5">
           {[pillarColumns.slice(0, 3), pillarColumns.slice(3, 6)].map((group, groupIndex) => (
-            <div key={`mobile-group-${groupIndex}`} className="grid grid-cols-3 gap-2">
+            <div key={`mobile-group-${groupIndex}`} className="grid grid-cols-3 gap-1.5">
               {group.map((column) => {
                 const { stem, branch } = getGanZhiParts(column.value);
                 const shenShaTags = getColumnShenSha(column.label);
+                const shenShaText = shenShaTags.slice(0, 4).join(" ");
                 return (
                   <div
                     key={`mobile-${column.label}`}
-                    className="rounded-md border border-zinc-200 bg-zinc-50 p-2 text-center"
+                    className="rounded-md border border-zinc-200 bg-zinc-50 p-1.5 text-center"
                   >
-                    <p className="text-[11px] text-zinc-500">{column.label}</p>
-                    <div className="mt-1 flex h-10 items-center justify-center overflow-hidden">
+                    <p className="text-[10px] text-zinc-500">{column.label}</p>
+                    <div className="mt-0.5 flex h-8 items-center justify-center overflow-hidden">
                       <p className={`text-[24px] font-semibold leading-[1] ${getStemColorClass(stem)}`}>
                         {stem || "--"}
                       </p>
                     </div>
-                    <div className="mt-1 flex h-10 items-center justify-center overflow-hidden">
+                    <div className="mt-0.5 flex h-8 items-center justify-center overflow-hidden">
                       <p className={`text-[24px] font-semibold leading-[1] ${getBranchColorClass(branch)}`}>
                         {branch || "--"}
                       </p>
                     </div>
                     {!!shenShaTags.length && (
-                      <div className="mt-1 flex flex-wrap items-center justify-center gap-1">
-                        {shenShaTags.slice(0, 2).map((tag) => (
-                          <span
-                            key={`mobile-tag-${column.label}-${tag}`}
-                            title={SHEN_SHA_TOOLTIP_MAP[tag] ?? tag}
-                            className="rounded border border-zinc-200 bg-white px-1 py-0.5 text-[10px] text-zinc-600"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
+                      <p className="mt-0.5 line-clamp-2 text-[10px] text-zinc-600">{shenShaText}</p>
                     )}
                   </div>
                 );
@@ -151,62 +187,76 @@ export default function BaziTable({ ganZhi }: BaziTableProps) {
           ))}
         </div>
       </div>
-      <div className="hidden overflow-x-auto px-3 pb-1 sm:block">
-        <div className="grid min-w-[760px] grid-cols-[72px_repeat(6,minmax(0,1fr))] border border-zinc-200 text-center">
-          <div className="border-b border-r border-zinc-200 bg-zinc-100 py-2 text-xs text-zinc-500">
+      <div className="hidden overflow-hidden px-2 pb-1 sm:block">
+        <div
+          ref={desktopGridRef}
+          className="grid w-full overflow-hidden border border-zinc-200"
+          style={{ gridTemplateColumns: `52px repeat(${pillarColumns.length}, 1fr)` }}
+        >
+          <div className={`border-b border-r border-zinc-200 bg-zinc-100 py-1 text-[10px] text-zinc-500 ${alignCenterClass}`}>
             项目
           </div>
           {pillarColumns.map((column) => (
             <div
               key={column.label}
-              className="border-b border-r border-zinc-200 bg-zinc-100 py-2 text-sm text-zinc-600 last:border-r-0"
+              className={`border-b border-r border-zinc-200 bg-zinc-100 py-1 text-zinc-600 last:border-r-0 ${labelTextClass} ${alignCenterClass}`}
             >
               {column.label}
             </div>
           ))}
-          <div className="border-b border-r border-zinc-200 bg-zinc-50 py-2 text-zinc-500">天干</div>
+          <div className={`border-b border-r border-zinc-200 bg-zinc-50 py-1 text-zinc-500 ${metaTextClass} ${alignCenterClass}`}>天干</div>
           {pillarColumns.map((column, index) => {
             const { stem } = getGanZhiParts(column.value);
             return (
               <div
                 key={`stem-${column.value}-${index}`}
-                className="flex h-16 items-center justify-center overflow-hidden border-b border-r border-zinc-200 px-1 py-1 text-[30px] font-semibold leading-[1] last:border-r-0"
+                className={`flex h-12 items-center justify-center overflow-hidden border-b border-r border-zinc-200 px-0.5 py-0.5 font-semibold leading-[1] last:border-r-0 ${pillarTextClass}`}
               >
                 <span className={`${getStemColorClass(stem)} inline-block leading-[1]`}>{stem || "--"}</span>
               </div>
             );
           })}
-          <div className="border-b border-r border-zinc-200 bg-zinc-50 py-2 text-zinc-500">地支</div>
+          <div className={`border-b border-r border-zinc-200 bg-zinc-50 py-1 text-zinc-500 ${metaTextClass} ${alignCenterClass}`}>地支</div>
           {pillarColumns.map((column, index) => {
             const { branch } = getGanZhiParts(column.value);
             return (
               <div
                 key={`branch-${column.value}-${index}`}
-                className="flex h-16 items-center justify-center overflow-hidden border-b border-r border-zinc-200 px-1 py-1 text-[30px] font-semibold leading-[1] last:border-r-0"
+                className={`flex h-12 items-center justify-center overflow-hidden border-b border-r border-zinc-200 px-0.5 py-0.5 font-semibold leading-[1] last:border-r-0 ${pillarTextClass}`}
               >
                 <span className={`${getBranchColorClass(branch)} inline-block leading-[1]`}>{branch || "--"}</span>
               </div>
             );
           })}
-          <div className="border-b border-r border-zinc-200 bg-zinc-50 py-2 text-zinc-500">十神</div>
+          <div className={`border-b border-r border-zinc-200 bg-zinc-50 py-1 text-zinc-500 ${metaTextClass} ${alignCenterClass}`}>十神</div>
           {[
-            null,
-            null,
+            ganZhi.currentLiuNianDetail
+              ? {
+                  gan: ganZhi.currentLiuNianDetail.stemShiShen,
+                  zhiList: ganZhi.currentLiuNianDetail.hideGanShiShen.map((entry) => entry.shiShen)
+                }
+              : null,
+            ganZhi.currentDaYun
+              ? {
+                  gan: ganZhi.currentDaYun.stemShiShen,
+                  zhiList: ganZhi.currentDaYun.hideGanShiShen.map((entry) => entry.shiShen)
+                }
+              : null,
             { gan: ganZhi.yearShiShenGan, zhiList: ganZhi.yearShiShenZhi },
             { gan: ganZhi.monthShiShenGan, zhiList: ganZhi.monthShiShenZhi },
             { gan: ganZhi.dayShiShenGan, zhiList: ganZhi.dayShiShenZhi },
-            { gan: ganZhi.timeShiShenGan, zhiList: ganZhi.timeShiShenZhi }
+            ...(hasHourPillar ? [{ gan: ganZhi.timeShiShenGan, zhiList: ganZhi.timeShiShenZhi }] : [])
           ].map((value, index) => (
             <div
               key={`shishen-${index}`}
-              className="border-b border-r border-zinc-200 px-1 py-2 text-xs last:border-r-0"
+              className={`border-b border-r border-zinc-200 px-0.5 py-1 last:border-r-0 ${metaTextClass} ${alignCenterClass}`}
             >
               {value ? (
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   <span className={`font-semibold ${getShiShenColorClass(value.gan)}`}>
                     {value.gan}
                   </span>
-                  <div className="flex flex-wrap items-center justify-center gap-1">
+                  <div className="flex flex-wrap items-center justify-center gap-0.5 text-zinc-600">
                     {value.zhiList.map((item, itemIndex) => (
                       <span key={`${item}-${itemIndex}`} className={getShiShenColorClass(item)}>
                         {item}
@@ -219,35 +269,45 @@ export default function BaziTable({ ganZhi }: BaziTableProps) {
               )}
             </div>
           ))}
-          <div className="border-b border-r border-zinc-200 bg-zinc-50 py-2 text-zinc-500">藏干</div>
-          {["--", "--", ganZhi.yearHideGan, ganZhi.monthHideGan, ganZhi.dayHideGan, ganZhi.timeHideGan].map(
+          <div className={`border-b border-r border-zinc-200 bg-zinc-50 py-1 text-zinc-500 ${metaTextClass} ${alignCenterClass}`}>藏干</div>
+          {[
+            ganZhi.currentLiuNianDetail?.hideGanShiShen.map((entry) => entry.hideGan).join(" ") ?? "--",
+            ganZhi.currentDaYun?.hideGanShiShen.map((entry) => entry.hideGan).join(" ") ?? "--",
+            ganZhi.yearHideGan,
+            ganZhi.monthHideGan,
+            ganZhi.dayHideGan,
+            ...(hasHourPillar ? [ganZhi.timeHideGan] : [])
+          ].map(
             (value, index) => (
               <div
                 key={`hidegan-${index}`}
-                className="border-b border-r border-zinc-200 px-1 py-2 text-xs text-zinc-600 last:border-r-0"
+                className={`border-b border-r border-zinc-200 px-0.5 py-1 text-zinc-600 last:border-r-0 ${metaTextClass} ${alignCenterClass} whitespace-nowrap`}
               >
-                {Array.isArray(value) ? value.join("、") : value}
+                {Array.isArray(value) ? value.join(" ") : value}
               </div>
             )
           )}
-          <div className="border-b border-r border-zinc-200 bg-zinc-50 py-2 text-zinc-500">神煞</div>
+          <div className={`border-b border-r border-zinc-200 bg-zinc-50 py-1 text-zinc-500 ${metaTextClass} ${alignCenterClass}`}>神煞</div>
           {pillarColumns.map((column, index) => {
-            const tags = getColumnShenSha(column.label);
+            const value = shenShaDisplayMap.get(column.label);
+            const rows = value?.rows ?? [];
+            const tags = value?.tags ?? [];
             return (
               <div
                 key={`pillar-shensha-${index}`}
-                className="border-b border-r border-zinc-200 px-1 py-2 text-xs text-zinc-700 last:border-r-0"
+                className={`border-b border-r border-zinc-200 px-0.5 py-1 text-zinc-700 last:border-r-0 ${isNarrowColumn ? "text-[9px]" : "text-[10px]"} ${alignCenterClass}`}
               >
                 {tags.length ? (
-                  <div className="flex flex-wrap items-center justify-center gap-1">
-                    {tags.map((tag) => (
-                      <span
-                        key={`tag-${index}-${tag}`}
-                        title={SHEN_SHA_TOOLTIP_MAP[tag] ?? tag}
-                        className="cursor-help rounded border border-zinc-200 bg-zinc-50 px-1 py-0.5 text-[10px] text-zinc-600"
-                      >
-                        {tag}
-                      </span>
+                  <div className="space-y-0.5 text-zinc-600">
+                    {rows.slice(0, shenShaMaxRows).map((row, rowIndex) => (
+                      <p key={`tag-row-${index}-${rowIndex}`} className="truncate leading-4">
+                        {row.map((tag) => (
+                          <span key={`tag-${index}-${tag}`} title={SHEN_SHA_TOOLTIP_MAP[tag] ?? tag}>
+                            {tag}
+                            {" "}
+                          </span>
+                        ))}
+                      </p>
                     ))}
                   </div>
                 ) : (
@@ -256,19 +316,26 @@ export default function BaziTable({ ganZhi }: BaziTableProps) {
               </div>
             );
           })}
-          <div className="border-r border-zinc-200 bg-zinc-50 py-2 text-zinc-500">十二长生</div>
-          {["--", "--", ganZhi.yearDiShi, ganZhi.monthDiShi, ganZhi.dayDiShi, ganZhi.timeDiShi].map(
+          <div className={`border-r border-zinc-200 bg-zinc-50 py-1 text-zinc-500 ${metaTextClass} ${alignCenterClass}`}>十二长生</div>
+          {[
+            ganZhi.currentLiuNianDetail?.diShi ?? "--",
+            ganZhi.currentDaYun?.diShi ?? "--",
+            ganZhi.yearDiShi,
+            ganZhi.monthDiShi,
+            ganZhi.dayDiShi,
+            ...(hasHourPillar ? [ganZhi.timeDiShi] : [])
+          ].map(
             (value, index) => (
               <div
                 key={`dishi-${index}`}
-                className="border-r border-zinc-200 py-2 text-sm text-zinc-700 last:border-r-0"
+                className={`border-r border-zinc-200 py-1 text-zinc-700 last:border-r-0 ${metaTextClass} ${alignCenterClass}`}
               >
                 {value}
               </div>
             )
           )}
         </div>
-        <p className="mt-2 text-[11px] text-zinc-500">
+        <p className="mt-1 text-[10px] text-zinc-500">
           十二长生：长生、沐浴、冠带、临官、帝旺、衰、病、死、墓、绝、胎、养。
         </p>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { GanZhiResult } from "@/lib/bazi";
 import PatternAnalysis from "@/components/pattern-analysis";
 import ShenShaBadge from "@/components/shen-sha-badge";
@@ -36,7 +36,23 @@ function getShiShenShortColorClass(shortName: string): string {
 
 export default function FortuneCards({ ganZhi }: FortuneCardsProps) {
   const [shenShaMode, setShenShaMode] = useState<"compact" | "full">("compact");
+  const [activeLuckIndex, setActiveLuckIndex] = useState<number | null>(ganZhi.currentDaYun?.index ?? null);
+  const [titleVisible, setTitleVisible] = useState(true);
   const getVisibleShenSha = (tags: string[]) => (shenShaMode === "compact" ? tags.slice(0, 3) : tags);
+  const activeLuck =
+    ganZhi.daYun.find((item) => item.index === activeLuckIndex) ?? ganZhi.currentDaYun ?? ganZhi.daYun[0] ?? null;
+
+  useEffect(() => {
+    setActiveLuckIndex(ganZhi.currentDaYun?.index ?? ganZhi.daYun[0]?.index ?? null);
+  }, [ganZhi.currentDaYun, ganZhi.daYun]);
+
+  useEffect(() => {
+    setTitleVisible(false);
+    const timer = window.setTimeout(() => {
+      setTitleVisible(true);
+    }, 20);
+    return () => window.clearTimeout(timer);
+  }, [activeLuckIndex]);
 
   return (
     <div className="space-y-2 rounded-md border border-[#c8ad8f] bg-[#f8f4ef] p-3 text-xs text-slate-700">
@@ -73,25 +89,29 @@ export default function FortuneCards({ ganZhi }: FortuneCardsProps) {
           完整
         </button>
       </div>
-      {ganZhi.currentDaYun ? (
-        <p className="text-sm text-slate-800">
-          当前大运：{ganZhi.currentDaYun.ganZhi}（{ganZhi.currentDaYun.startYear}-
-          {ganZhi.currentDaYun.endYear}，{ganZhi.currentDaYun.startAge}-{ganZhi.currentDaYun.endAge}
-          岁）
+      {activeLuck ? (
+        <p
+          className={`text-sm text-slate-800 transition-opacity duration-300 ${
+            titleVisible ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          当前大运：{activeLuck.ganZhi}（{activeLuck.startYear}-{activeLuck.endYear}，
+          {activeLuck.startAge}-{activeLuck.endAge}岁）
         </p>
       ) : (
         <p>当前日期尚未进入正式大运区间。</p>
       )}
       <div className="grid grid-cols-1 gap-2 pt-1 min-[420px]:grid-cols-2">
         {ganZhi.daYun.map((item) => {
-          const isCurrent = ganZhi.currentDaYun?.index === item.index;
+          const isCurrent = activeLuck?.index === item.index;
 
           return (
             <div
               key={`${item.index}-${item.ganZhi}`}
-              className={`min-h-[172px] rounded-md border px-2 py-2 transition-colors duration-150 touch-manipulation active:scale-[0.99] active:brightness-95 ${
+              onClick={() => setActiveLuckIndex(item.index)}
+              className={`min-h-[172px] cursor-pointer rounded-md border px-2 py-2 transition-colors duration-150 touch-manipulation active:scale-[0.99] active:brightness-95 ${
                 isCurrent
-                  ? "border-[#9a6c43] bg-[#efe2d2] text-[#5c3d25]"
+                  ? "border-2 border-[#b39b7d] bg-[#efe2d2] text-[#5c3d25]"
                   : "border-[#d9c5ad] bg-white/80 text-slate-600"
               }`}
             >
