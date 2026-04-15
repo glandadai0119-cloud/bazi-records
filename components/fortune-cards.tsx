@@ -198,6 +198,9 @@ export default function FortuneCards({
                     {(item.liuNianList?.length ? item.liuNianList : ganZhi.liuNian).map((yearItem) => {
                       const isSelected = activeYear?.startYear === yearItem.startYear;
                       const isCurrentYear = yearItem.ganZhi === ganZhi.currentLiuNian;
+                      const [yearGan = "", yearZhi = ""] = Array.from(yearItem.ganZhi);
+                      const stemShiShen = yearItem.stemShiShen || "--";
+                      const branchShiShen = yearItem.hideGanShiShen[0]?.shiShen || "--";
                       return (
                         <button
                           key={`year-in-luck-${item.index}-${yearItem.startYear}-${yearItem.ganZhi}`}
@@ -214,7 +217,14 @@ export default function FortuneCards({
                                 : "border-slate-200 bg-white text-slate-700"
                           }`}
                         >
-                          <p className="text-[10px] font-semibold leading-4">{yearItem.ganZhi}</p>
+                          <p className="flex flex-col items-center text-[10px] font-semibold leading-4">
+                            <span>{yearGan}</span>
+                            <span>{yearZhi}</span>
+                          </p>
+                          <p className="mt-0.5 flex flex-col items-center text-[9px] leading-3 text-slate-500">
+                            <span>{stemShiShen}</span>
+                            <span>{branchShiShen}</span>
+                          </p>
                           <p className="text-[9px] leading-4 text-slate-500">{yearItem.startYear}</p>
                         </button>
                       );
