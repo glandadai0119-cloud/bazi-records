@@ -38,6 +38,24 @@ function getShiShenShortColorClass(shortName: string): string {
   return "text-slate-500";
 }
 
+function getStemColorClass(stem: string): string {
+  if ("甲乙".includes(stem)) return "text-[#2d8a4e]";
+  if ("丙丁".includes(stem)) return "text-[#cc3333]";
+  if ("戊己".includes(stem)) return "text-[#8b4513]";
+  if ("庚辛".includes(stem)) return "text-[#b39b7d]";
+  if ("壬癸".includes(stem)) return "text-[#1e90ff]";
+  return "text-slate-700";
+}
+
+function getBranchColorClass(branch: string): string {
+  if ("寅卯".includes(branch)) return "text-[#2d8a4e]";
+  if ("巳午".includes(branch)) return "text-[#cc3333]";
+  if ("辰戌丑未".includes(branch)) return "text-[#8b4513]";
+  if ("申酉".includes(branch)) return "text-[#b39b7d]";
+  if ("亥子".includes(branch)) return "text-[#1e90ff]";
+  return "text-slate-700";
+}
+
 export default function FortuneCards({
   ganZhi,
   activeLuckIndex,
@@ -211,21 +229,29 @@ export default function FortuneCards({
                           }}
                           className={`rounded border px-1 py-1 text-center transition ${
                             isSelected
-                              ? "border-2 border-[#4b5a78] bg-[#e9eef8] text-[#2e3c56]"
+                              ? "border-2 border-dashed border-[#4b5a78] bg-[#e9eef8] text-[#2e3c56]"
                               : isCurrentYear
                                 ? "border-[#7ea1d8] bg-[#edf3ff] text-[#2e4b7d]"
                                 : "border-slate-200 bg-white text-slate-700"
                           }`}
                         >
-                          <p className="flex flex-col items-center text-[10px] font-semibold leading-4">
-                            <span>{yearGan}</span>
-                            <span>{yearZhi}</span>
-                          </p>
-                          <p className="mt-0.5 flex flex-col items-center text-[9px] leading-3 text-slate-500">
-                            <span>{stemShiShen}</span>
-                            <span>{branchShiShen}</span>
-                          </p>
-                          <p className="text-[9px] leading-4 text-slate-500">{yearItem.startYear}</p>
+                          <div className="relative flex min-h-[86px] flex-col items-center justify-between pb-4">
+                            <div className="flex flex-col items-center">
+                              <span className={`text-[11px] font-semibold leading-4 ${getStemColorClass(yearGan)}`}>
+                                {yearGan}
+                              </span>
+                              <span className="text-[9px] leading-3 text-slate-500/90">{stemShiShen}</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                              <span className={`text-[11px] font-semibold leading-4 ${getBranchColorClass(yearZhi)}`}>
+                                {yearZhi}
+                              </span>
+                              <span className="text-[9px] leading-3 text-slate-500/90">{branchShiShen}</span>
+                            </div>
+                            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[9px] leading-3 text-slate-500">
+                              {yearItem.startYear}
+                            </span>
+                          </div>
                         </button>
                       );
                     })}
