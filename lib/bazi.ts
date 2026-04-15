@@ -9,6 +9,24 @@ type WuXing = "wood" | "fire" | "earth" | "metal" | "water";
 
 type GanYinYang = "yang" | "yin";
 
+type LiuNianYearItem = {
+  index: number;
+  ganZhi: string;
+  startYear: number;
+  endYear: number;
+  startAge: number;
+  endAge: number;
+  stemShiShen: string;
+  hideGanShiShen: Array<{
+    hideGan: string;
+    shiShen: string;
+    short: string;
+  }>;
+  hideGanShiShenShort: string[];
+  diShi: string;
+  shenSha: string[];
+};
+
 type DaYunOrLiuNianItem = {
   index: number;
   ganZhi: string;
@@ -25,6 +43,7 @@ type DaYunOrLiuNianItem = {
   hideGanShiShenShort: string[];
   diShi: string;
   shenSha: string[];
+  liuNianList?: LiuNianYearItem[];
 };
 
 export type GanZhiResult = {
@@ -473,6 +492,35 @@ function getDiShiByDayGanAndZhi(dayGan: string, zhi: string): string {
   return DI_SHI_ORDER[offset] ?? "--";
 }
 
+function buildLiuNianYearItem(
+  targetYear: number,
+  birthYear: number,
+  dayGan: string,
+  dayZhi: string,
+  monthZhi: string,
+  dayGanZhi: string,
+  index: number
+): LiuNianYearItem {
+  const liuNianGanZhi = Solar.fromYmdHms(targetYear, 6, 1, 12, 0, 0)
+    .getLunar()
+    .getYearInGanZhiExact();
+  const { gan, zhi } = getGanZhiParts(liuNianGanZhi);
+  const hideGanShiShen = getHideGanShiShen(dayGan, zhi);
+  return {
+    index,
+    ganZhi: liuNianGanZhi,
+    startYear: targetYear,
+    endYear: targetYear,
+    startAge: targetYear - birthYear + 1,
+    endAge: targetYear - birthYear + 1,
+    stemShiShen: getShiShenByGan(dayGan, gan),
+    hideGanShiShen,
+    hideGanShiShenShort: hideGanShiShen.map((entry) => entry.short),
+    diShi: getDiShiByDayGanAndZhi(dayGan, zhi),
+    shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, liuNianGanZhi)
+  };
+}
+
 /**
  * 根据日干和地支，输出地支藏干对应的十神信息。
  */
@@ -746,6 +794,9 @@ function createGanZhiResultFromSolar(
     const daYunGanZhi = item.getGanZhi();
     const { gan, zhi } = getGanZhiParts(daYunGanZhi);
     const hideGanShiShen = getHideGanShiShen(dayGan, zhi);
+    const liuNianList = Array.from({ length: 10 }, (_, index) =>
+      buildLiuNianYearItem(item.getStartYear() + index, birthYear, dayGan, dayZhi, monthZhi, dayGanZhi, index)
+    );
     return {
       index: item.getIndex(),
       ganZhi: daYunGanZhi,
@@ -757,7 +808,8 @@ function createGanZhiResultFromSolar(
       hideGanShiShen,
       hideGanShiShenShort: hideGanShiShen.map((entry) => entry.short),
       diShi: getDiShiByDayGanAndZhi(dayGan, zhi),
-      shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, daYunGanZhi)
+      shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, daYunGanZhi),
+      liuNianList
     };
   });
   const daYun = rawDaYun.filter((item) => item.index > 0).length
@@ -771,27 +823,9 @@ function createGanZhiResultFromSolar(
     daYun[0] ??
     daYun[daYun.length - 1] ??
     null;
-  const liuNian = Array.from({ length: 7 }, (_, index) => {
-    const targetYear = baseYear + index;
-    const liuNianGanZhi = Solar.fromYmdHms(targetYear, 6, 1, 12, 0, 0)
-      .getLunar()
-      .getYearInGanZhiExact();
-    const { gan, zhi } = getGanZhiParts(liuNianGanZhi);
-    const hideGanShiShen = getHideGanShiShen(dayGan, zhi);
-    return {
-      index,
-      ganZhi: liuNianGanZhi,
-      startYear: targetYear,
-      endYear: targetYear,
-      startAge: targetYear - birthYear + 1,
-      endAge: targetYear - birthYear + 1,
-      stemShiShen: getShiShenByGan(dayGan, gan),
-      hideGanShiShen,
-      hideGanShiShenShort: hideGanShiShen.map((entry) => entry.short),
-      diShi: getDiShiByDayGanAndZhi(dayGan, zhi),
-      shenSha: getShenShaTags(dayGan, dayZhi, monthZhi, dayGanZhi, liuNianGanZhi)
-    };
-  });
+  const liuNian = Array.from({ length: 7 }, (_, index) =>
+    buildLiuNianYearItem(baseYear + index, birthYear, dayGan, dayZhi, monthZhi, dayGanZhi, index)
+  );
   const currentLiuNianDetail = liuNian[0] ?? null;
 
   const result = directPillars

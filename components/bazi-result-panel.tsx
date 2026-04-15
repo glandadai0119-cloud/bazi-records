@@ -55,6 +55,9 @@ export default function BaziResultPanel({
   const [activeDaYunIndex, setActiveDaYunIndex] = useState<number | null>(
     ganZhi.currentDaYun?.index ?? ganZhi.daYun[0]?.index ?? null
   );
+  const [activeLiuNianYear, setActiveLiuNianYear] = useState<number | null>(
+    ganZhi.currentLiuNianDetail?.startYear ?? null
+  );
   const [note, setNote] = useState("");
   const [savedTip, setSavedTip] = useState("");
   const storageKey = useMemo(
@@ -133,10 +136,25 @@ export default function BaziResultPanel({
     () => ganZhi.daYun.find((item) => item.index === activeDaYunIndex) ?? ganZhi.currentDaYun ?? ganZhi.daYun[0] ?? null,
     [activeDaYunIndex, ganZhi.currentDaYun, ganZhi.daYun]
   );
+  const activeLiuNian = useMemo(() => {
+    const dayunYearList = activeDaYun?.liuNianList ?? [];
+    return (
+      dayunYearList.find((item) => item.startYear === activeLiuNianYear) ??
+      dayunYearList[0] ??
+      ganZhi.liuNian.find((item) => item.startYear === activeLiuNianYear) ??
+      ganZhi.currentLiuNianDetail ??
+      ganZhi.liuNian[0] ??
+      null
+    );
+  }, [activeDaYun, activeLiuNianYear, ganZhi.currentLiuNianDetail, ganZhi.liuNian]);
 
   useEffect(() => {
     setActiveDaYunIndex(ganZhi.currentDaYun?.index ?? ganZhi.daYun[0]?.index ?? null);
   }, [ganZhi.currentDaYun, ganZhi.daYun]);
+  useEffect(() => {
+    const nextYear = (activeDaYun?.liuNianList ?? [])[0]?.startYear ?? ganZhi.currentLiuNianDetail?.startYear ?? null;
+    setActiveLiuNianYear(nextYear);
+  }, [activeDaYun, ganZhi.currentLiuNianDetail]);
 
   const handleSaveNote = () => {
     if (typeof window === "undefined" || !storageKey) {
@@ -200,7 +218,7 @@ export default function BaziResultPanel({
               </div>
             ) : null}
           </div>
-          <BaziTable ganZhi={ganZhi} activeDaYun={activeDaYun} />
+          <BaziTable ganZhi={ganZhi} activeDaYun={activeDaYun} activeLiuNian={activeLiuNian} />
           {!hasHourPillar ? (
             <div className="mx-3 mt-2 rounded-md border border-[#e6ded2] bg-[#fbf8f3] px-3 py-2">
               <p className="text-xs font-medium text-slate-700">五行比例（缺时柱时的参考补位）</p>
@@ -224,6 +242,8 @@ export default function BaziResultPanel({
             ganZhi={ganZhi}
             activeLuckIndex={activeDaYunIndex}
             onActiveLuckChange={setActiveDaYunIndex}
+            activeYear={activeLiuNian}
+            onActiveYearChange={(year) => setActiveLiuNianYear(year.startYear)}
           />
           {!hasHourPillar ? (
             <p className="px-3 text-center text-xs font-medium text-amber-700">

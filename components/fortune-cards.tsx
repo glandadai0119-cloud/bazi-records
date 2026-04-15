@@ -9,6 +9,8 @@ type FortuneCardsProps = {
   ganZhi: GanZhiResult;
   activeLuckIndex: number | null;
   onActiveLuckChange: (index: number) => void;
+  activeYear: GanZhiResult["liuNian"][number] | null;
+  onActiveYearChange: (year: GanZhiResult["liuNian"][number]) => void;
 };
 
 function getShiShenTagClass(shiShen: string): string {
@@ -36,12 +38,19 @@ function getShiShenShortColorClass(shortName: string): string {
   return "text-slate-500";
 }
 
-export default function FortuneCards({ ganZhi, activeLuckIndex, onActiveLuckChange }: FortuneCardsProps) {
+export default function FortuneCards({
+  ganZhi,
+  activeLuckIndex,
+  onActiveLuckChange,
+  activeYear,
+  onActiveYearChange
+}: FortuneCardsProps) {
   const [shenShaMode, setShenShaMode] = useState<"compact" | "full">("compact");
   const [titleVisible, setTitleVisible] = useState(true);
   const getVisibleShenSha = (tags: string[]) => (shenShaMode === "compact" ? tags.slice(0, 3) : tags);
   const activeLuck =
     ganZhi.daYun.find((item) => item.index === activeLuckIndex) ?? ganZhi.currentDaYun ?? ganZhi.daYun[0] ?? null;
+  const activeLuckYears = activeLuck?.liuNianList?.length ? activeLuck.liuNianList : ganZhi.liuNian;
 
   useEffect(() => {
     setTitleVisible(false);
@@ -176,74 +185,29 @@ export default function FortuneCards({ ganZhi, activeLuckIndex, onActiveLuckChan
       </div>
       <div className="space-y-2 border-t border-[#d9c5ad] pt-2">
         <p className="font-semibold tracking-[0.2em] text-[#6a4729]">流年</p>
-        <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 md:grid-cols-3">
-          {ganZhi.liuNian.map((item) => {
-            const isCurrent = item.ganZhi === ganZhi.currentLiuNian;
+        <p className="text-[11px] text-slate-500">点击年份可同步更新顶部“流年”柱位。</p>
+        <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-5">
+          {activeLuckYears.map((item) => {
+            const isCurrent = activeYear?.startYear === item.startYear;
             return (
-              <div
+              <button
                 key={`liunian-${item.startYear}-${item.ganZhi}`}
-                className={`min-h-[172px] rounded-md border px-2 py-2 transition duration-150 touch-manipulation active:scale-[0.99] active:brightness-95 ${
+                type="button"
+                onClick={() => onActiveYearChange(item)}
+                className={`rounded-md border px-2 py-2 text-left transition duration-150 touch-manipulation active:scale-[0.99] active:brightness-95 ${
                   isCurrent
-                    ? "border-blue-300 bg-blue-50 text-blue-900"
+                    ? "border-2 border-[#4b5a78] bg-[#e9eef8] text-[#2e3c56]"
                     : "border-slate-200 bg-white/70 text-slate-700"
                 }`}
               >
-                <p className="text-sm font-semibold">
+                <p className="text-xs font-semibold">
                   {item.startYear} · {item.ganZhi}
                 </p>
-                <p className="text-xs">{item.startAge}岁</p>
-                <p className="mt-1 flex items-center gap-1 text-[11px]">
-                  <span className="text-slate-500">主气十神:</span>
-                  <span
-                    className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getShiShenTagClass(
-                      item.stemShiShen
-                    )}`}
-                  >
-                    {item.stemShiShen || "--"}
-                  </span>
+                <p className="mt-0.5 text-[10px] text-slate-500">{item.startAge}岁</p>
+                <p className="mt-1 text-[10px] text-slate-600">
+                  {item.stemShiShen || "--"} · {item.diShi}
                 </p>
-                <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-500">
-                  藏干短象:
-                  {item.hideGanShiShenShort.map((shortName, shortIndex) => (
-                    <span
-                      key={`${item.ganZhi}-${shortName}-${shortIndex}`}
-                      className={getShiShenShortColorClass(shortName)}
-                    >
-                      {shortName}
-                    </span>
-                  ))}
-                </p>
-                <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-slate-500">
-                  {item.hideGanShiShen.map((entry, entryIndex) => (
-                    <span key={`${item.ganZhi}-${entry.hideGan}-${entryIndex}`}>
-                      <span className="mr-1 text-slate-500">{entry.hideGan}</span>
-                      <span
-                        className={`inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${getShiShenTagClass(
-                          entry.shiShen
-                        )}`}
-                      >
-                        {entry.shiShen}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1 border-t border-slate-200 pt-1.5">
-                  {item.shenSha.length ? (
-                    <>
-                      {getVisibleShenSha(item.shenSha).map((tag) => (
-                        <ShenShaBadge key={`${item.startYear}-${tag}`} tag={tag} theme="slate" />
-                      ))}
-                      {shenShaMode === "compact" && item.shenSha.length > 3 ? (
-                        <span className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] text-slate-600">
-                          +{item.shenSha.length - 3}
-                        </span>
-                      ) : null}
-                    </>
-                  ) : (
-                    <span className="text-[10px] text-slate-400">无神煞</span>
-                  )}
-                </div>
-              </div>
+              </button>
             );
           })}
         </div>

@@ -86,13 +86,15 @@ function getShiShenColorClass(shiShen: string): string {
 type BaziTableProps = {
   ganZhi: GanZhiResult;
   activeDaYun?: GanZhiResult["daYun"][number] | null;
+  activeLiuNian?: GanZhiResult["liuNian"][number] | null;
 };
 
-export default function BaziTable({ ganZhi, activeDaYun }: BaziTableProps) {
+export default function BaziTable({ ganZhi, activeDaYun, activeLiuNian }: BaziTableProps) {
   const effectiveDaYun = activeDaYun ?? ganZhi.currentDaYun ?? null;
+  const effectiveLiuNian = activeLiuNian ?? ganZhi.currentLiuNianDetail ?? null;
   const hasHourPillar = ganZhi.time.trim().length >= 2 && ganZhi.time !== "--";
   const pillarColumns = [
-    { label: "流年", value: ganZhi.currentLiuNian },
+    { label: "流年", value: effectiveLiuNian?.ganZhi ?? ganZhi.currentLiuNian },
     { label: "大运", value: effectiveDaYun?.ganZhi ?? "--" },
     { label: "年柱", value: ganZhi.year },
     { label: "月柱", value: ganZhi.month },
@@ -127,7 +129,7 @@ export default function BaziTable({ ganZhi, activeDaYun }: BaziTableProps) {
   }, [pillarColumns.length]);
 
   const getColumnShenSha = (label: string): string[] => {
-    if (label === "流年") return ganZhi.currentLiuNianDetail?.shenSha ?? [];
+    if (label === "流年") return effectiveLiuNian?.shenSha ?? [];
     if (label === "大运") return effectiveDaYun?.shenSha ?? [];
     if (label === "年柱") return ganZhi.pillarShenSha.year;
     if (label === "月柱") return ganZhi.pillarShenSha.month;
@@ -232,10 +234,10 @@ export default function BaziTable({ ganZhi, activeDaYun }: BaziTableProps) {
           })}
           <div className={`border-b border-r border-zinc-200 bg-zinc-50 py-1 text-zinc-500 ${metaTextClass} ${alignCenterClass}`}>十神</div>
           {[
-            ganZhi.currentLiuNianDetail
+            effectiveLiuNian
               ? {
-                  gan: ganZhi.currentLiuNianDetail.stemShiShen,
-                  zhiList: ganZhi.currentLiuNianDetail.hideGanShiShen.map((entry) => entry.shiShen)
+                  gan: effectiveLiuNian.stemShiShen,
+                  zhiList: effectiveLiuNian.hideGanShiShen.map((entry) => entry.shiShen)
                 }
               : null,
             effectiveDaYun
@@ -273,7 +275,7 @@ export default function BaziTable({ ganZhi, activeDaYun }: BaziTableProps) {
           ))}
           <div className={`border-b border-r border-zinc-200 bg-zinc-50 py-1 text-zinc-500 ${metaTextClass} ${alignCenterClass}`}>藏干</div>
           {[
-            ganZhi.currentLiuNianDetail?.hideGanShiShen.map((entry) => entry.hideGan).join(" ") ?? "--",
+            effectiveLiuNian?.hideGanShiShen.map((entry) => entry.hideGan).join(" ") ?? "--",
             effectiveDaYun?.hideGanShiShen.map((entry) => entry.hideGan).join(" ") ?? "--",
             ganZhi.yearHideGan,
             ganZhi.monthHideGan,
@@ -320,7 +322,7 @@ export default function BaziTable({ ganZhi, activeDaYun }: BaziTableProps) {
           })}
           <div className={`border-r border-zinc-200 bg-zinc-50 py-1 text-zinc-500 ${metaTextClass} ${alignCenterClass}`}>十二长生</div>
           {[
-            ganZhi.currentLiuNianDetail?.diShi ?? "--",
+            effectiveLiuNian?.diShi ?? "--",
             effectiveDaYun?.diShi ?? "--",
             ganZhi.yearDiShi,
             ganZhi.monthDiShi,
